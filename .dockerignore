@@ -2,8 +2,9 @@
 # (Windows binaries would break the Linux build)
 node_modules
 
-# Next.js build output — rebuilt inside the image
+# Next.js build output - rebuilt inside the image
 .next
+.next-dev
 out
 dist
 

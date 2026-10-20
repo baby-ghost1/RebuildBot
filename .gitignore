@@ -3,6 +3,7 @@ node_modules/
 
 # Next.js build output
 .next/
+.next-dev/
 out/
 
 # Environment variables (secrets)
@@ -14,6 +15,7 @@ out/
 *.log
 npm-debug.log*
 .server.pid
+.server.child.pid
 .server.log
 
 # OS files

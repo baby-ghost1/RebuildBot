@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "RebuildBot — Next.js app that checks any repo for Buildathon rebuild-readiness",
   "scripts": {
-    "dev": "next dev -p 5173",
+    "dev": "node scripts/dev.js",
     "build": "next build",
     "start": "next start -p 5000",
     "serve": "node scripts/serve.js start",

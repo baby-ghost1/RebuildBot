@@ -18,6 +18,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const pidFile = path.join(root, '.server.pid');
+const childPidFile = path.join(root, '.server.child.pid');
 const logFile = path.join(root, '.server.log');
 const nextBin = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
@@ -44,19 +45,55 @@ function readPid() {
 }
 
 function stopServer() {
-  const pid = readPid();
-  if (!pid || !isAlive(pid)) {
-    if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
-    console.log('Server is not running.');
-    return;
+  // Kill the Next.js child first (and its whole tree on Windows),
+  // otherwise it keeps running and corrupting the .next folder.
+  const childPid = readChildPid();
+  if (childPid && isAlive(childPid)) {
+    killTree(childPid);
+    console.log(`Server process stopped (pid ${childPid}).`);
   }
-  try {
-    process.kill(pid, 'SIGTERM');
-  } catch {
-    /* already gone */
+  if (fs.existsSync(childPidFile)) fs.unlinkSync(childPidFile);
+
+  const pid = readPid();
+  if (pid && isAlive(pid)) {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      /* already gone */
+    }
+    console.log(`Supervisor stopped (pid ${pid}).`);
   }
   if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
-  console.log(`Server stopped (pid ${pid}).`);
+  console.log('Server is stopped.');
+}
+
+function readChildPid() {
+  try {
+    return Number(fs.readFileSync(childPidFile, 'utf8').trim());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Kill a process and everything it spawned.
+ * On Windows `taskkill /T` takes down the whole tree.
+ */
+function killTree(pid) {
+  try {
+    if (process.platform === 'win32') {
+      spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true });
+    } else {
+      process.kill(-pid, 'SIGKILL');
+      process.kill(pid, 'SIGKILL');
+    }
+  } catch {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 function status() {
@@ -119,7 +156,15 @@ function startServer() {
       cwd: root,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
+      env: { ...process.env, NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || '.next' },
     });
+
+    // Remember the child pid so "npm run serve:stop" can kill the tree
+    try {
+      fs.writeFileSync(childPidFile, String(child.pid));
+    } catch {
+      /* ignore */
+    }
 
     child.stdout.on('data', (d) => {
       if (log) log.write(d);

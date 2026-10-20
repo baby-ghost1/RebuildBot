@@ -27,8 +27,9 @@ import {
   ListChecks,
   Gauge,
   Zap,
-  Wrench,
   Globe,
+  ClipboardCopy,
+  Trash2,
 } from 'lucide-react';
 
 // Copy and paste ready fix for every failing checklist item
@@ -72,6 +73,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedFix, setCopiedFix] = useState('');
+  const [inputCopied, setInputCopied] = useState(false);
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
   const resultsRef = useRef(null);
 
@@ -129,6 +132,26 @@ export default function Home() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setError('Clipboard is blocked in this browser. Select the command and copy it manually.');
+    }
+  };
+
+  /**
+   * The input action button has two states:
+   *  1. Copy  - copies the current input value to the clipboard
+   *  2. Clear - turns into a bin icon and clears the input on click
+   */
+  const handleInputAction = async () => {
+    if (inputCopied) {
+      setRepoPath('');
+      setInputCopied(false);
+      return;
+    }
+    if (!repoPath) return;
+    try {
+      await navigator.clipboard.writeText(repoPath);
+      setInputCopied(true);
+    } catch {
+      setError('Clipboard access was blocked by this browser.');
     }
   };
 
@@ -349,11 +372,32 @@ export default function Home() {
                   <input
                     type="text"
                     value={repoPath}
-                    onChange={(e) => setRepoPath(e.target.value)}
+                    onChange={(e) => {
+                      setRepoPath(e.target.value);
+                      if (inputCopied) setInputCopied(false);
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && runAnalysis()}
                     placeholder="GitHub URL or local folder path - leave empty to score this project"
-                    className="w-full rounded-lg border border-[#0B132B]/12 bg-white/80 py-3 pl-11 pr-4 text-sm text-[#0B132B] outline-none transition placeholder:text-[#0B132B]/35 focus:border-[#39FF88] focus:neon-ring"
+                    className="w-full rounded-lg border border-[#0B132B]/12 bg-white/80 py-3 pl-11 pr-12 text-sm text-[#0B132B] outline-none transition placeholder:text-[#0B132B]/35 focus:border-[#39FF88] focus:neon-ring"
                   />
+                  <button
+                    type="button"
+                    onClick={handleInputAction}
+                    disabled={!repoPath && !inputCopied}
+                    title={inputCopied ? 'Clear the field' : 'Copy to clipboard'}
+                    aria-label={inputCopied ? 'Clear the field' : 'Copy to clipboard'}
+                    className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      inputCopied
+                        ? 'border-rose-300/70 bg-rose-100 text-rose-600 hover:border-rose-400 hover:bg-rose-200'
+                        : 'border-[#39FF88]/50 bg-[#39FF88]/15 text-[#0B132B] hover:border-[#39FF88] hover:bg-[#39FF88]/35'
+                    }`}
+                  >
+                    {inputCopied ? (
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2.3} />
+                    ) : (
+                      <ClipboardCopy className="h-3.5 w-3.5" strokeWidth={2.3} />
+                    )}
+                  </button>
                 </div>
                 <button
                   onClick={runAnalysis}
@@ -403,7 +447,7 @@ export default function Home() {
         {report && (
           <section ref={resultsRef} className="mt-8 scroll-mt-24">
             <div className="overflow-hidden rounded-3xl border border-[#0B132B]/8 bg-white/70 shadow-soft backdrop-blur-xl">
-              <div className="flex flex-col items-center gap-6 p-6 sm:flex-row sm:p-7">
+              <div className="flex flex-col items-center gap-7 p-7 sm:flex-row sm:p-8">
                 <div className="relative shrink-0">
                   <div
                     className={`flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br ${scoreTone} shadow-lift`}
@@ -431,7 +475,7 @@ export default function Home() {
               </div>
 
               <div className="border-t border-[#0B132B]/8">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-6 pb-4">
                   <div className="flex items-center gap-2">
                     <ListChecks className="h-3.5 w-3.5 text-[#0B132B]/60" strokeWidth={2.2} />
                     <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#0B132B]/55">
@@ -454,70 +498,93 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="grid gap-3.5 px-5 pb-5">
+                <div className="grid gap-4 px-5 pb-6">
                   {visibleChecks.length === 0 && (
-                    <div className="rounded-lg border border-[#39FF88]/40 bg-[#39FF88]/10 px-4 py-5 text-center text-[12px] font-semibold text-[#0B132B]">
+                    <div className="rounded-xl border border-[#39FF88]/40 bg-[#39FF88]/10 px-4 py-6 text-center text-[12.5px] font-semibold text-[#0B132B]">
                       Every checklist item passes. This project rebuilds cleanly.
                     </div>
                   )}
                   {visibleChecks.map((check) => (
                     <div
                       key={check.id}
-                      className={`flex items-start gap-3.5 rounded-xl border px-4 py-4 transition ${
+                      className={`group relative overflow-hidden rounded-xl border transition ${
                         check.pass
-                          ? 'border-[#39FF88]/45 bg-[#39FF88]/8'
-                          : 'border-rose-300/60 bg-rose-50/70'
+                          ? 'border-[#39FF88]/40 bg-[#39FF88]/8 hover:border-[#39FF88]/70'
+                          : 'border-rose-300/70 bg-rose-50/70 hover:border-rose-400'
                       }`}
                     >
-                      {check.pass ? (
-                        <CheckCircle2
-                          className="mt-px h-[18px] w-[18px] shrink-0 text-[#0B132B]"
-                          strokeWidth={2.3}
-                        />
-                      ) : (
-                        <XCircle
-                          className="mt-px h-[18px] w-[18px] shrink-0 text-rose-500"
-                          strokeWidth={2.3}
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-bold text-[#0B132B]">{check.label}</p>
-                        <p className="mt-1 max-w-[72ch] text-[12px] leading-relaxed text-[#3D4560]/80">
-                          {check.detail}
-                        </p>
+                      {/* Colour coded accent bar on the left */}
+                      <span
+                        className={`absolute inset-y-0 left-0 w-1 ${
+                          check.pass ? 'bg-[#39FF88]' : 'bg-rose-500'
+                        }`}
+                      />
+
+                      <div className="flex items-start gap-3.5 py-4 pl-5 pr-4">
+                        {check.pass ? (
+                          <CheckCircle2
+                            className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#0B132B]"
+                            strokeWidth={2.3}
+                          />
+                        ) : (
+                          <XCircle
+                            className="mt-0.5 h-[18px] w-[18px] shrink-0 text-rose-500"
+                            strokeWidth={2.3}
+                          />
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[13px] font-bold text-[#0B132B]">{check.label}</p>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide ${
+                                check.pass
+                                  ? 'bg-[#39FF88]/25 text-[#0B132B]'
+                                  : 'bg-rose-200 text-rose-800'
+                              }`}
+                            >
+                              {check.pass ? 'Pass' : 'Fail'}
+                            </span>
+                          </div>
+
+                          <p className="mt-1.5 max-w-[72ch] text-[12px] leading-relaxed text-[#3D4560]/85">
+                            {check.detail}
+                          </p>
+
+                          {!check.pass && FIX_HINTS[check.id] && (
+                            <div className="mt-3 flex items-center gap-2">
+                              <pre className="overflow-x-auto rounded-lg bg-[#0B132B] px-3 py-2 font-mono text-[10.5px] leading-relaxed text-[#39FF88]">
+                                <code>{FIX_HINTS[check.id]}</code>
+                              </pre>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard
+                                    ?.writeText(FIX_HINTS[check.id])
+                                    .then(() => {
+                                      setCopiedFix(check.id);
+                                      setTimeout(() => setCopiedFix(''), 2000);
+                                    })
+                                    .catch(() => {});
+                                }}
+                                title="Copy this fix"
+                                className="shrink-0 rounded-lg border border-[#0B132B]/12 bg-white p-1.5 text-[#0B132B] transition hover:border-[#39FF88] hover:bg-[#39FF88]/15"
+                              >
+                                {copiedFix === check.id ? (
+                                  <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" strokeWidth={2.2} />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-
-            {/* Fix guide - only when something is failing */}
-            {failureCount > 0 && (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-amber-300/50 bg-amber-50/60 backdrop-blur-xl">
-                <div className="flex items-center gap-2 border-b border-amber-300/40 px-5 py-3">
-                  <Wrench className="h-4 w-4 text-amber-700" strokeWidth={2.2} />
-                  <h4 className="text-[12px] font-bold uppercase tracking-[0.12em] text-amber-800">
-                    What to do next
-                  </h4>
-                </div>
-                <div className="grid gap-3 p-5 sm:grid-cols-2">
-                  {report.checks
-                    .filter((c) => !c.pass)
-                    .map((c) => (
-                      <div key={c.id} className="rounded-xl border border-amber-300/40 bg-white/70 p-3.5">
-                        <p className="text-[12.5px] font-bold text-[#0B132B]">{c.label}</p>
-                        <p className="mt-1 text-[11.5px] leading-relaxed text-[#3D4560]">{c.detail}</p>
-                        {FIX_HINTS[c.id] && (
-                          <pre className="mt-2.5 overflow-x-auto rounded-lg bg-[#0B132B] p-2.5 font-mono text-[10.5px] leading-relaxed text-[#39FF88]">
-                            <code>{FIX_HINTS[c.id]}</code>
-                          </pre>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
 
             {/* Judge command */}
             <div className="mt-4 overflow-hidden rounded-2xl border border-[#0B132B]/8 bg-white/60 shadow-soft backdrop-blur-xl">
