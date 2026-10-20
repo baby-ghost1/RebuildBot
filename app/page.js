@@ -83,6 +83,7 @@ export default function Home() {
   // Which control started the run, so only that button shows a spinner.
   const [loadingSource, setLoadingSource] = useState(null); // null | url | folder | self
   const [folderName, setFolderName] = useState('');
+  const [health, setHealth] = useState('checking'); // checking | ok | down
   const inputRef = useRef(null);
   const folderInputRef = useRef(null);
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
@@ -99,11 +100,19 @@ export default function Home() {
   useEffect(() => {
     let timer = null;
 
+    const ping = async () => {
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        setHealth(res.ok ? 'ok' : 'down');
+      } catch {
+        setHealth('down');
+      }
+    };
+
     const start = () => {
       if (timer) return;
-      timer = setInterval(() => {
-        fetch('/api/health', { cache: 'no-store' }).catch(() => {});
-      }, 60_000);
+      ping();
+      timer = setInterval(ping, 60_000);
     };
     const stop = () => {
       if (!timer) return;
@@ -940,20 +949,137 @@ export default function Home() {
         )}
       </main>
 
-      {/* Footer - mirrors the light top bar, no heavy bar treatment */}
-      <footer className="mx-auto max-w-5xl px-6 pb-10 pt-4">
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-[#0B132B]/8 pt-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88]">
-              <Bot className="h-3.5 w-3.5" strokeWidth={2.2} />
+      {/* Footer */}
+      <footer className="mt-8 border-t border-[#0B132B]/8 bg-white/45 backdrop-blur-xl">
+        <div className="mx-auto max-w-5xl px-6 py-10">
+          <div className="flex flex-col gap-8 md:flex-row md:justify-between">
+            {/* Brand */}
+            <div className="max-w-[34ch]">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88]">
+                  <Bot className="h-4 w-4" strokeWidth={2.2} />
+                </div>
+                <span className="text-[14px] font-extrabold tracking-tight text-[#0B132B]">
+                  RebuildBot
+                </span>
+              </div>
+              <p className="mt-3 text-[12px] leading-relaxed text-[#3D4560]/75">
+                Know if your project survives the judges rebuild, before they do. Runs the
+                official 11-point rebuild checklist against any GitHub repository or local folder.
+              </p>
+
+              {/* Live status */}
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#0B132B]/10 bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-[#0B132B]/70">
+                <span className="relative flex h-2 w-2">
+                  <span
+                    className={`absolute inline-flex h-full w-full rounded-full opacity-70 ${
+                      health === 'ok'
+                        ? 'animate-ping bg-[#39FF88]'
+                        : health === 'down'
+                          ? 'bg-rose-500'
+                          : 'bg-amber-400'
+                    }`}
+                  />
+                  <span
+                    className={`relative inline-flex h-2 w-2 rounded-full ${
+                      health === 'ok'
+                        ? 'bg-[#39FF88]'
+                        : health === 'down'
+                          ? 'bg-rose-500'
+                          : 'bg-amber-400'
+                    }`}
+                  />
+                </span>
+                {health === 'ok' && 'All systems operational'}
+                {health === 'down' && 'Service unreachable'}
+                {health === 'checking' && 'Checking service'}
+              </div>
             </div>
-            <p className="text-[12px] font-semibold text-[#0B132B]/65">
-              RebuildBot - solo entry, Frontier Buildathon 2026
-            </p>
+
+            {/* Links */}
+            <div className="grid grid-cols-2 gap-x-12 gap-y-6 sm:gap-x-16">
+              <div>
+                <h3 className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#0B132B]/40">
+                  Project
+                </h3>
+                <ul className="mt-3 space-y-2.5">
+                  <li>
+                    <a
+                      href="https://github.com/baby-ghost1/RebuildBot"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#3D4560] transition hover:text-[#0B132B]"
+                    >
+                      <FolderGit2 className="h-3.5 w-3.5" strokeWidth={2.1} />
+                      Source code
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#analyze"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#3D4560] transition hover:text-[#0B132B]"
+                    >
+                      <Search className="h-3.5 w-3.5" strokeWidth={2.1} />
+                      Run a check
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#how-it-works"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#3D4560] transition hover:text-[#0B132B]"
+                    >
+                      <BookOpen className="h-3.5 w-3.5" strokeWidth={2.1} />
+                      How it works
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#0B132B]/40">
+                  Buildathon
+                </h3>
+                <ul className="mt-3 space-y-2.5">
+                  <li>
+                    <a
+                      href="https://omnirush.ai/buildathon"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#3D4560] transition hover:text-[#0B132B]"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" strokeWidth={2.1} />
+                      Frontier 2026
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/api/health"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#3D4560] transition hover:text-[#0B132B]"
+                    >
+                      <Gauge className="h-3.5 w-3.5" strokeWidth={2.1} />
+                      Health check
+                    </a>
+                  </li>
+                  <li>
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#3D4560]/70">
+                      <Lock className="h-3.5 w-3.5" strokeWidth={2.1} />
+                      No API keys
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <p className="text-[11px] font-medium text-[#0B132B]/40">
-            Built with Next.js and OmniRush - MIT licensed
-          </p>
+
+          {/* Bottom bar */}
+          <div className="mt-9 flex flex-col items-center justify-between gap-3 border-t border-[#0B132B]/8 pt-6 sm:flex-row">
+            <p className="text-[11px] font-medium text-[#0B132B]/45">
+              Solo entry, Frontier Buildathon 2026. Built with Next.js and OmniRush.
+            </p>
+            <p className="text-[11px] font-medium text-[#0B132B]/45">MIT licensed</p>
+          </div>
         </div>
       </footer>
     </div>
