@@ -116,11 +116,11 @@ export default function Home() {
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[#FBFAF7]" />
         <div className="absolute inset-0 grid-veil opacity-70" />
-        <div className="absolute -top-40 -left-32 h-[34rem] w-[34rem] rounded-full bg-[#39FF88]/18 blur-[120px]" />
+        <div className="absolute -top-56 left-1/2 h-[52rem] w-[52rem] -translate-x-1/2 rounded-full bg-[#39FF88]/22 blur-[140px]" />
         <div className="absolute -bottom-48 -right-24 h-[38rem] w-[38rem] rounded-full bg-[#0B132B]/10 blur-[130px]" />
       </div>
 
-      {/* Top bar — branding and source only, no navbar links */}
+      {/* Top bar - branding and source only, no navbar links */}
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B132B] text-[#39FF88] shadow-soft">
@@ -243,7 +243,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Worked example — light header, no heavy black bar */}
+          {/* Worked example - light header, no heavy black bar */}
           <div className="mt-5 overflow-hidden rounded-2xl border border-[#0B132B]/8 bg-white/60 shadow-soft backdrop-blur-xl">
             <div className="flex items-center gap-2.5 border-b border-[#0B132B]/8 bg-[#39FF88]/12 px-5 py-3">
               <Lightbulb className="h-4 w-4 text-[#0B132B]" strokeWidth={2.2} />
@@ -286,7 +286,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Analyzer — light header instead of a solid black slab */}
+        {/* Analyzer - light header instead of a solid black slab */}
         <section id="analyze" className="scroll-mt-24">
           <div className="overflow-hidden rounded-3xl border border-[#0B132B]/8 bg-white/70 shadow-lift backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#0B132B]/8 bg-[#39FF88]/10 px-6 py-4">
@@ -311,7 +311,7 @@ export default function Home() {
                     value={repoPath}
                     onChange={(e) => setRepoPath(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && runAnalysis()}
-                    placeholder="Absolute path to a repo folder — leave empty to score this project"
+                    placeholder="Absolute path to a repo folder - leave empty to score this project"
                     className="w-full rounded-xl border border-[#0B132B]/12 bg-white/80 py-3.5 pl-11 pr-4 text-sm text-[#0B132B] outline-none transition placeholder:text-[#0B132B]/35 focus:border-[#39FF88] focus:neon-ring"
                   />
                 </div>
@@ -522,7 +522,7 @@ export default function Home() {
               <Bot className="h-4 w-4" strokeWidth={2.2} />
             </div>
             <p className="text-[12px] font-semibold text-[#0B132B]/70">
-              RebuildBot — solo entry, Frontier Buildathon 2026
+              RebuildBot - solo entry, Frontier Buildathon 2026
             </p>
           </div>
           <p className="text-[11px] font-medium text-[#0B132B]/45">

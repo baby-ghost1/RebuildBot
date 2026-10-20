@@ -3,7 +3,7 @@ const path = require('path');
 
 const projectRoot = path.join(__dirname, '..');
 
-describe('RebuildBot — Buildathon checklist', () => {
+describe('RebuildBot - Buildathon checklist', () => {
   test('Dockerfile exists and uses node:22-slim', () => {
     const dockerPath = path.join(projectRoot, 'Dockerfile');
     expect(fs.existsSync(dockerPath)).toBe(true);
