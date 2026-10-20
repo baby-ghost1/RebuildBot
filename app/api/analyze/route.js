@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
 import analyzeRepo from '../../../lib/analyzer.js';
 
 export async function POST(request) {

@@ -9,10 +9,12 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 ## ✨ What it does
 
 - **Live rebuild score** — analyzes a repo and scores it 0–100 against the Buildathon checklist
-- **9 checklist checks** — lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo
+- **11 checklist checks** — lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo, `.dockerignore`, `.gitignore`
 - **One-click analysis** — paste a path, hit "Run Analysis", see pass/fail instantly
 - **Refined interface** — warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
 - **How-to-use guide built in** — worked example shown right in the dashboard
+- **Failure filter** — one tap to hide passing checks and focus on what to fix
+- **Copy-to-clipboard** — grab the exact judge command with one click
 - **Zero API keys** — uses only free OmniRush features and standard open-source libraries
 
 ## 🛠 Tech stack
@@ -22,8 +24,8 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 | Frontend | **Next.js 14** (App Router) + React 18 + **Tailwind CSS v4** |
 | Icons | **lucide-react** (SVG icon set, no emoji) |
 | Backend | Next.js API Routes (`/api/health`, `/api/analyze`) |
-| Core logic | `lib/analyzer.js` — 9-point rebuild-readiness analyzer |
-| Tests | Jest (8 offline tests) |
+| Core logic | `lib/analyzer.js` — 11-point rebuild-readiness analyzer |
+| Tests | Jest (14 offline tests) |
 | Container | Docker (`node:22-slim`), offline-capable |
 
 ---

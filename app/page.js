@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Bot,
   Terminal,
@@ -12,13 +12,21 @@ import {
   Gavel,
   ArrowRight,
   FolderSearch,
-  FileCheck2,
+  FolderGit2,
   Boxes,
   ShieldCheck,
-  FolderGit2,
   Sparkles,
   Cpu,
   Layers,
+  Copy,
+  Check,
+  RotateCcw,
+  CircleAlert,
+  FileCode2,
+  Lock,
+  ListChecks,
+  Gauge,
+  Zap,
 } from 'lucide-react';
 
 const STEPS = [
@@ -30,7 +38,7 @@ const STEPS = [
   {
     icon: Search,
     title: 'Run the analysis',
-    body: 'RebuildBot inspects nine Buildathon checklist items against that folder and grades each one as pass or fail.',
+    body: 'RebuildBot inspects eleven Buildathon checklist items against that folder and grades each one as pass or fail.',
   },
   {
     icon: ShieldCheck,
@@ -39,11 +47,16 @@ const STEPS = [
   },
 ];
 
+const JUDGE_CMD = 'docker build -t rebuildbot . && docker run --rm --network none rebuildbot npm test';
+
 export default function Home() {
   const [repoPath, setRepoPath] = useState('');
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [showOnlyFailures, setShowOnlyFailures] = useState(false);
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     runAnalysis();
@@ -60,22 +73,42 @@ export default function Home() {
         body: JSON.stringify({ repoPath: repoPath || undefined }),
       });
       const data = await res.json();
-      if (data.success) setReport(data.report);
-      else setError(data.error || 'Analysis failed');
+      if (data.success) {
+        setReport(data.report);
+        setShowOnlyFailures(false);
+      } else {
+        setError(data.error || 'Analysis failed');
+      }
     } catch {
       setError('Could not reach the API. Make sure the server is running.');
     }
     setLoading(false);
   };
 
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(JUDGE_CMD);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('Clipboard is blocked in this browser. Select the command and copy it manually.');
+    }
+  };
+
   const scoreTone =
     report?.score === 100
-      ? 'from-[#39FF88] to-[#2ee06f]'
+      ? 'from-[#39FF88] to-[#22d06a]'
       : report?.score >= 75
         ? 'from-[#39FF88] to-amber-400'
         : report?.score >= 50
           ? 'from-amber-400 to-orange-500'
           : 'from-orange-500 to-rose-500';
+
+  const visibleChecks = showOnlyFailures
+    ? report?.checks.filter((c) => !c.pass) ?? []
+    : report?.checks ?? [];
+
+  const failureCount = report ? report.checks.filter((c) => !c.pass).length : 0;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -87,39 +120,37 @@ export default function Home() {
         <div className="absolute -bottom-48 -right-24 h-[38rem] w-[38rem] rounded-full bg-[#0B132B]/10 blur-[130px]" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[#0B132B]/8 bg-white/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B132B] text-[#39FF88] shadow-soft">
-              <Bot className="h-5 w-5" strokeWidth={2.2} />
-            </div>
-            <div className="leading-tight">
-              <h1 className="text-[17px] font-extrabold tracking-tight text-[#0B132B]">RebuildBot</h1>
-              <p className="text-[11px] font-medium text-[#0B132B]/55">
-                Buildathon rebuild-readiness checker
-              </p>
-            </div>
+      {/* Top bar — branding and source only, no navbar links */}
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B132B] text-[#39FF88] shadow-soft">
+            <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />
           </div>
-
-          <a
-            href="https://github.com/baby-ghost1/RebuildBot"
-            target="_blank"
-            rel="noreferrer"
-            className="group flex items-center gap-2 rounded-full border border-[#0B132B]/10 bg-white/70 px-4 py-2 text-xs font-semibold text-[#0B132B] transition hover:border-[#39FF88] hover:bg-[#39FF88]/12"
-          >
-            <FolderGit2 className="h-4 w-4" strokeWidth={2.2} />
-            <span className="hidden sm:inline">Source</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
-          </a>
+          <div className="leading-tight">
+            <h1 className="text-[15px] font-extrabold tracking-tight text-[#0B132B]">RebuildBot</h1>
+            <p className="text-[10.5px] font-medium text-[#0B132B]/50">
+              Buildathon rebuild-readiness checker
+            </p>
+          </div>
         </div>
-      </header>
+
+        <a
+          href="https://github.com/baby-ghost1/RebuildBot"
+          target="_blank"
+          rel="noreferrer"
+          className="group flex items-center gap-1.5 rounded-full border border-[#0B132B]/10 bg-white/60 px-3.5 py-1.5 text-[11px] font-semibold text-[#0B132B] backdrop-blur transition hover:border-[#39FF88] hover:bg-[#39FF88]/12"
+        >
+          <FolderGit2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+          <span>Source</span>
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
+        </a>
+      </div>
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
         {/* Hero */}
-        <section className="pt-16 pb-14 sm:pt-24">
+        <section className="pt-14 pb-14 sm:pt-20">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#39FF88]/40 bg-[#39FF88]/12 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#0B132B]">
-            <Sparkles className="h-3.5 w-3.5 text-[#0B132B]" strokeWidth={2.4} />
+            <Sparkles className="h-3.5 w-3.5" strokeWidth={2.4} />
             OmniRush Frontier Buildathon 2026
           </div>
 
@@ -155,6 +186,26 @@ export default function Home() {
               How it works
             </a>
           </div>
+
+          {/* Trust strip */}
+          <div className="mt-12 grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: Gauge, label: '11 checks', note: 'Full Buildathon checklist' },
+              { icon: Zap, label: 'Under 1s', note: 'Scores any local folder' },
+              { icon: Lock, label: 'No API keys', note: 'Runs fully offline' },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="flex items-center gap-3 rounded-xl border border-[#0B132B]/8 bg-white/60 px-4 py-3 backdrop-blur"
+              >
+                <s.icon className="h-4 w-4 shrink-0 text-[#0B132B]/60" strokeWidth={2.1} />
+                <div className="leading-tight">
+                  <p className="text-[12.5px] font-bold text-[#0B132B]">{s.label}</p>
+                  <p className="text-[11px] text-[#0B132B]/50">{s.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* How to use */}
@@ -170,7 +221,7 @@ export default function Home() {
             </div>
             <div className="hidden items-center gap-2 rounded-full border border-[#0B132B]/10 bg-white/70 px-3.5 py-1.5 text-[11px] font-semibold text-[#0B132B]/60 backdrop-blur sm:flex">
               <Cpu className="h-3.5 w-3.5" strokeWidth={2.2} />
-              9 checks, one command
+              One command
             </div>
           </div>
 
@@ -192,11 +243,11 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Example */}
-          <div className="mt-5 overflow-hidden rounded-2xl border border-[#39FF88]/40 bg-white/60 shadow-soft backdrop-blur-xl">
-            <div className="flex items-center gap-2.5 border-b border-[#0B132B]/8 bg-[#0B132B] px-5 py-3">
-              <Lightbulb className="h-4 w-4 text-[#39FF88]" strokeWidth={2.2} />
-              <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#39FF88]">
+          {/* Worked example — light header, no heavy black bar */}
+          <div className="mt-5 overflow-hidden rounded-2xl border border-[#0B132B]/8 bg-white/60 shadow-soft backdrop-blur-xl">
+            <div className="flex items-center gap-2.5 border-b border-[#0B132B]/8 bg-[#39FF88]/12 px-5 py-3">
+              <Lightbulb className="h-4 w-4 text-[#0B132B]" strokeWidth={2.2} />
+              <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#0B132B]">
                 Worked example
               </span>
             </div>
@@ -235,15 +286,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Analyzer */}
+        {/* Analyzer — light header instead of a solid black slab */}
         <section id="analyze" className="scroll-mt-24">
           <div className="overflow-hidden rounded-3xl border border-[#0B132B]/8 bg-white/70 shadow-lift backdrop-blur-xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#0B132B]/8 bg-[#0B132B] px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#0B132B]/8 bg-[#39FF88]/10 px-6 py-4">
               <div className="flex items-center gap-2.5">
-                <Boxes className="h-4.5 w-4.5 text-[#39FF88]" strokeWidth={2.2} />
-                <h2 className="text-sm font-bold tracking-tight text-white">Analyze a repository</h2>
+                <Boxes className="h-[18px] w-[18px] text-[#0B132B]" strokeWidth={2.2} />
+                <h2 className="text-sm font-bold tracking-tight text-[#0B132B]">Analyze a repository</h2>
               </div>
-              <span className="rounded-full border border-[#39FF88]/35 bg-[#39FF88]/12 px-3 py-1 font-mono text-[10px] font-semibold text-[#39FF88]">
+              <span className="rounded-full border border-[#0B132B]/10 bg-white/70 px-3 py-1 font-mono text-[10px] font-semibold text-[#0B132B]/60">
                 POST /api/analyze
               </span>
             </div>
@@ -267,15 +318,29 @@ export default function Home() {
                 <button
                   onClick={runAnalysis}
                   disabled={loading}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B132B] px-7 py-3.5 text-sm font-bold text-[#39FF88] transition hover:-translate-y-0.5 hover:bg-[#111c3a] disabled:translate-y-0 disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B132B] px-7 py-3.5 text-sm font-bold text-[#39FF88] transition hover:-translate-y-0.5 hover:bg-[#111c3a] disabled:translate-y-0 disabled:opacity-60"
                 >
-                  <Search className="h-4 w-4" strokeWidth={2.4} />
-                  {loading ? 'Analyzing' : 'Run Analysis'}
+                  {loading ? (
+                    <>
+                      <RotateCcw className="h-4 w-4 animate-spin" strokeWidth={2.4} />
+                      Analyzing
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4" strokeWidth={2.4} />
+                      Run Analysis
+                    </>
+                  )}
                 </button>
               </div>
 
+              <p className="mt-3 text-[11.5px] text-[#0B132B]/45">
+                Press Enter to run. Leave the field empty to score the RebuildBot project itself.
+              </p>
+
               {error && (
-                <div className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
+                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
+                  <CircleAlert className="mt-px h-4 w-4 shrink-0" strokeWidth={2.2} />
                   {error}
                 </div>
               )}
@@ -285,7 +350,7 @@ export default function Home() {
 
         {/* Results */}
         {report && (
-          <section className="mt-8">
+          <section ref={resultsRef} className="mt-8 scroll-mt-24">
             <div className="overflow-hidden rounded-3xl border border-[#0B132B]/8 bg-white/70 shadow-soft backdrop-blur-xl">
               <div className="flex flex-col items-center gap-7 p-8 sm:flex-row sm:p-9">
                 <div className="relative shrink-0">
@@ -312,15 +377,36 @@ export default function Home() {
               </div>
 
               <div className="border-t border-[#0B132B]/8">
-                <div className="flex items-center gap-2 px-6 pt-6 pb-2">
-                  <ShieldCheck className="h-4 w-4 text-[#0B132B]/60" strokeWidth={2.2} />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#0B132B]/55">
-                    Checklist detail
-                  </h4>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-6 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="h-4 w-4 text-[#0B132B]/60" strokeWidth={2.2} />
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#0B132B]/55">
+                      Checklist detail
+                    </h4>
+                    {failureCount > 0 && (
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                        {failureCount} failing
+                      </span>
+                    )}
+                  </div>
+
+                  {failureCount > 0 && (
+                    <button
+                      onClick={() => setShowOnlyFailures((v) => !v)}
+                      className="rounded-full border border-[#0B132B]/12 bg-white/70 px-3 py-1 text-[11px] font-semibold text-[#0B132B] transition hover:border-[#39FF88] hover:bg-[#39FF88]/12"
+                    >
+                      {showOnlyFailures ? 'Show all checks' : 'Show only failures'}
+                    </button>
+                  )}
                 </div>
 
-                <div className="grid gap-2.5 p-6 pt-4">
-                  {report.checks.map((check) => (
+                <div className="grid gap-2.5 px-6 pb-6">
+                  {visibleChecks.length === 0 && (
+                    <div className="rounded-xl border border-[#39FF88]/40 bg-[#39FF88]/10 px-4 py-6 text-center text-[13px] font-semibold text-[#0B132B]">
+                      Every checklist item passes. This project rebuilds cleanly.
+                    </div>
+                  )}
+                  {visibleChecks.map((check) => (
                     <div
                       key={check.id}
                       className={`flex items-start gap-3.5 rounded-xl border px-4 py-3.5 transition ${
@@ -354,11 +440,29 @@ export default function Home() {
 
             {/* Judge command */}
             <div className="mt-5 overflow-hidden rounded-2xl border border-[#0B132B]/8 bg-white/60 shadow-soft backdrop-blur-xl">
-              <div className="flex items-center gap-2.5 border-b border-[#0B132B]/8 px-5 py-3.5">
-                <Gavel className="h-4 w-4 text-[#0B132B]/70" strokeWidth={2.2} />
-                <h4 className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#0B132B]/70">
-                  Reproduce the judge run
-                </h4>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#0B132B]/8 px-5 py-3.5">
+                <div className="flex items-center gap-2.5">
+                  <Gavel className="h-4 w-4 text-[#0B132B]/70" strokeWidth={2.2} />
+                  <h4 className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#0B132B]/70">
+                    Reproduce the judge run
+                  </h4>
+                </div>
+                <button
+                  onClick={copyCommand}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#0B132B]/12 bg-white/70 px-3 py-1 text-[11px] font-semibold text-[#0B132B] transition hover:border-[#39FF88] hover:bg-[#39FF88]/12"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-[#0B132B]" strokeWidth={2.6} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" strokeWidth={2.2} />
+                      Copy
+                    </>
+                  )}
+                </button>
               </div>
               <div className="p-5">
                 <pre className="overflow-x-auto rounded-xl bg-[#0B132B] p-4 font-mono text-[12px] leading-relaxed text-[#39FF88]">
@@ -375,6 +479,36 @@ export default function Home() {
                   is exactly what proves the project rebuilds.
                 </p>
               </div>
+            </div>
+
+            {/* Rebuild recipe */}
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  icon: FileCode2,
+                  title: 'Deterministic install',
+                  body: 'npm ci installs the exact versions pinned in package-lock.json.',
+                },
+                {
+                  icon: ShieldCheck,
+                  title: 'Offline safe',
+                  body: 'The image runs with --network none and the tests still pass.',
+                },
+                {
+                  icon: Cpu,
+                  title: 'Pinned runtime',
+                  body: 'Node 22 is fixed by .nvmrc, engines.node and the node:22-slim base.',
+                },
+              ].map((card) => (
+                <div
+                  key={card.title}
+                  className="rounded-2xl border border-[#0B132B]/8 bg-white/60 p-5 backdrop-blur"
+                >
+                  <card.icon className="h-[18px] w-[18px] text-[#0B132B]/70" strokeWidth={2.1} />
+                  <h4 className="mt-3 text-[13px] font-bold text-[#0B132B]">{card.title}</h4>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-[#3D4560]/80">{card.body}</p>
+                </div>
+              ))}
             </div>
           </section>
         )}

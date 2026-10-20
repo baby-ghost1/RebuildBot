@@ -64,4 +64,51 @@ describe('RebuildBot — Buildathon checklist', () => {
     expect(fs.existsSync(path.join(projectRoot, 'app', 'api', 'analyze', 'route.js'))).toBe(true);
     expect(fs.existsSync(path.join(projectRoot, 'lib', 'analyzer.js'))).toBe(true);
   });
+
+  test('.dockerignore excludes node_modules and .env', () => {
+    const dockerignore = path.join(projectRoot, '.dockerignore');
+    expect(fs.existsSync(dockerignore)).toBe(true);
+    const content = fs.readFileSync(dockerignore, 'utf8');
+    expect(content).toMatch(/^node_modules/m);
+    expect(content).toMatch(/^\.env$/m);
+  });
+
+  test('.gitignore excludes node_modules and .env', () => {
+    const gitignore = path.join(projectRoot, '.gitignore');
+    expect(fs.existsSync(gitignore)).toBe(true);
+    const content = fs.readFileSync(gitignore, 'utf8');
+    expect(content).toMatch(/node_modules/);
+    expect(content).toMatch(/\.env/);
+  });
+
+  test('Dockerfile installs from the lockfile with npm ci', () => {
+    const content = fs.readFileSync(path.join(projectRoot, 'Dockerfile'), 'utf8');
+    expect(content).toMatch(/COPY\s+package\.json\s+package-lock\.json/);
+    expect(content).toMatch(/RUN\s+npm\s+ci/);
+  });
+
+  test('package.json declares engines.node and a start script', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+    expect(pkg.engines.node).toBeDefined();
+    expect(pkg.scripts.start).toBeDefined();
+    expect(pkg.scripts.build).toBeDefined();
+  });
+
+  test('Analyzing this project yields a perfect score', () => {
+    const analyzer = require('../lib/analyzer.js');
+    const report = analyzer.default ? analyzer.default(projectRoot) : analyzer(projectRoot);
+    // Inside the Docker image the .git directory is intentionally absent,
+    // and the analyzer marks that check as skipped-but-passing, so the
+    // score is still 100 in both environments.
+    expect(report.score).toBe(100);
+    expect(report.passed).toBe(report.total);
+  });
+
+  test('Analyzer reports every checklist item as passing', () => {
+    const analyzer = require('../lib/analyzer.js');
+    const report = analyzer.default ? analyzer.default(projectRoot) : analyzer(projectRoot);
+    const failed = report.checks.filter((c) => !c.pass).map((c) => c.id);
+    expect(failed).toEqual([]);
+    expect(report.verdict).toMatch(/Perfect/i);
+  });
 });

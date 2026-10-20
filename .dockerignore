@@ -1,0 +1,25 @@
+# Dependencies — never copy the host's node_modules into the image
+# (Windows binaries would break the Linux build)
+node_modules
+
+# Next.js build output — rebuilt inside the image
+.next
+out
+dist
+
+# Version control (the .git directory is large and not needed to build)
+.git
+.github
+
+# Local env files — secrets must never enter the image
+.env
+.env.local
+.env.*.local
+
+# Logs and editor noise
+*.log
+npm-debug.log*
+.vscode
+.idea
+.DS_Store
+Thumbs.db
