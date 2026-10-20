@@ -146,6 +146,29 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(layout).toMatch(/fontVariables/);
   });
 
+  test('Health route exists and is never cached', () => {
+    const route = path.join(projectRoot, 'app', 'api', 'health', 'route.js');
+    expect(fs.existsSync(route)).toBe(true);
+    const content = fs.readFileSync(route, 'utf8');
+    // A cached response would not count as a real invocation, so the route
+    // must always be dynamic and must send no-store headers.
+    expect(content).toMatch(/force-dynamic/);
+    expect(content).toMatch(/no-store/);
+  });
+
+  test('Keep-alive script exists and targets the health route', () => {
+    const script = path.join(projectRoot, 'scripts', 'keepalive.js');
+    expect(fs.existsSync(script)).toBe(true);
+    const content = fs.readFileSync(script, 'utf8');
+    expect(content).toMatch(/api\/health/);
+    expect(content).toMatch(/KEEPALIVE_INTERVAL/);
+  });
+
+  test('The frontend sends a heartbeat to the health route', () => {
+    const page = fs.readFileSync(path.join(projectRoot, 'app', 'page.js'), 'utf8');
+    expect(page).toMatch(/\/api\/health/);
+  });
+
   test('Analyzing this project yields a perfect score', () => {
     const analyzer = require('../lib/analyzer.js');
     const report = analyzer.default ? analyzer.default(projectRoot) : analyzer(projectRoot);

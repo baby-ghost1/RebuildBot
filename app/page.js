@@ -84,6 +84,33 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Heartbeat: while the dashboard is open it pings the health route on a
+  // timer. This keeps the instance warm and makes the next request feel
+  // instant. It pauses when the tab is hidden so it never wastes calls.
+  useEffect(() => {
+    let timer = null;
+
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(() => {
+        fetch('/api/health', { cache: 'no-store' }).catch(() => {});
+      }, 60_000);
+    };
+    const stop = () => {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
   const runAnalysis = async () => {
     setLoading(true);
     setError('');

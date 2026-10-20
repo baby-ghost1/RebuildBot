@@ -11,6 +11,8 @@
     "serve:stop": "node scripts/serve.js stop",
     "serve:status": "node scripts/serve.js status",
     "serve:restart": "node scripts/serve.js restart",
+    "keepalive": "node scripts/keepalive.js",
+    "ping": "node scripts/keepalive.js",
     "test": "jest --ci --runInBand"
   },
   "engines": {

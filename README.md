@@ -55,10 +55,39 @@ Then open **http://localhost:5000** in your browser.
 | `npm run serve:restart` | Restart it |
 | `npm run dev` | Next.js dev server with hot reload on **http://localhost:5173** |
 | `npm run build` | Production build |
-| `npm start` | Run the production build in the foreground |
+| `npm start` | Run the production build in the foreground (honours the `PORT` env var) |
+| `npm run keepalive -- <url>` | Ping the health route on a timer so a free-tier host never sleeps |
 
 > Do not run `npm run dev` and `npm run serve` at the same time. They share the same
 > `.next` folder and will fight over it.
+
+## 💓 Health route and keep-alive
+
+`GET /api/health` is a deliberately cheap probe that returns JSON:
+
+```json
+{ "status": "ok", "service": "rebuildbot", "uptime": 412, "time": "2026-10-20T13:20:27.717Z" }
+```
+
+It always sends `Cache-Control: no-store`, because a cached response would not count as a
+real invocation and the host would still treat the app as idle.
+
+Two keep-alive layers:
+
+1. **In the browser** - while the dashboard is open it pings `/api/health` every 60
+   seconds. It pauses when the tab is hidden, so it never wastes calls.
+2. **From outside** - `scripts/keepalive.js` pings any deployed URL on a timer:
+
+```bash
+# ping every 5 minutes until you stop it
+npm run keepalive -- https://rebuildbot.vercel.app
+
+# one single ping, good for a cron job
+node scripts/keepalive.js https://rebuildbot.vercel.app --once
+
+# change the interval
+node scripts/keepalive.js https://rebuildbot.vercel.app --interval 3
+```
 
 ## 🧪 Test it
 
@@ -144,7 +173,10 @@ rebuildbot/
 │  ├─ analyzer.js          # 11-point rebuild-readiness logic
 │  └─ github.js            # GitHub URL parser + shallow clone
 ├─ scripts/
-│  └─ serve.js             # server supervisor (start/stop/status/restart)
+│  ├─ serve.js             # server supervisor (start/stop/status/restart)
+│  ├─ start.js             # production launcher (honours PORT)
+│  ├─ dev.js               # dev server launcher (uses .next-dev)
+│  └─ keepalive.js         # health-route pinger for free-tier hosts
 ├─ tests/
 │  └─ rebuild.test.js      # 23 offline checklist tests
 ├─ .nvmrc                  # pins Node 22
