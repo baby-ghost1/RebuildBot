@@ -80,8 +80,9 @@ export default function Home() {
   // Which source the user is currently working with. Only one is active at a
   // time, so the other inputs are disabled and stay out of the way.
   const [mode, setMode] = useState('none'); // none | url | folder | self
+  // Which control started the run, so only that button shows a spinner.
+  const [loadingSource, setLoadingSource] = useState(null); // null | url | folder | self
   const [folderName, setFolderName] = useState('');
-  const [folderBusy, setFolderBusy] = useState(false);
   const inputRef = useRef(null);
   const folderInputRef = useRef(null);
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
@@ -120,7 +121,7 @@ export default function Home() {
   }, []);
 
   const runAnalysis = async (options = {}) => {
-    const { allowEmpty = false } = options;
+    const { allowEmpty = false, source = 'url' } = options;
     const target = repoPath.trim();
 
     // The Run Analysis button needs something to work on. The "Score this
@@ -132,6 +133,7 @@ export default function Home() {
 
     setInputError('');
     setLoading(true);
+    setLoadingSource(source);
     setError('');
     try {
       const res = await fetch('/api/analyze', {
@@ -169,6 +171,7 @@ export default function Home() {
       );
     } finally {
       setLoading(false);
+      setLoadingSource(null);
     }
   };
 
@@ -192,7 +195,9 @@ export default function Home() {
     event.target.value = ''; // allow picking the same folder again
     if (picked.length === 0) return;
 
-    setFolderBusy(true);
+    setLoading(true);
+    setLoadingSource('folder');
+    setInputError('');
     setError('');
 
     try {
@@ -244,7 +249,8 @@ export default function Home() {
     } catch (e) {
       setError(`Could not read the selected folder: ${e?.message || 'unknown error'}`);
     } finally {
-      setFolderBusy(false);
+      setLoading(false);
+      setLoadingSource(null);
     }
   };
 
@@ -516,7 +522,7 @@ export default function Home() {
                     ref={inputRef}
                     type="text"
                     value={repoPath}
-                    disabled={mode === 'folder' || mode === 'self'}
+                    disabled={loading || mode === 'folder' || mode === 'self'}
                     onChange={(e) => {
                       setRepoPath(e.target.value);
                       if (inputCopied) setInputCopied(false);
@@ -550,18 +556,12 @@ export default function Home() {
                   </button>
                 </div>
                 <button
-                  onClick={() => runAnalysis()}
-                  disabled={loading || mode !== 'url' || !repoPath.trim()}
-                  title={
-                    mode !== 'url'
-                      ? 'Only one source can be active at a time. Use Reset to switch.'
-                      : !repoPath.trim()
-                        ? 'Paste a GitHub URL or a local folder path first'
-                        : 'Run analysis'
-                  }
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0B132B] px-6 py-3 text-sm font-bold text-[#39FF88] transition hover:-translate-y-0.5 hover:bg-[#111c3a] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => runAnalysis({ source: 'url' })}
+                  disabled={loading}
+                  title="Run the checklist against the URL or path in the input box"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0B132B] px-6 py-3 text-sm font-bold text-[#39FF88] transition hover:-translate-y-0.5 hover:bg-[#111c3a] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {loading ? (
+                  {loadingSource === 'url' ? (
                     <>
                       <RotateCcw className="h-3.5 w-3.5 animate-spin" strokeWidth={2.4} />
                       Analyzing
@@ -597,23 +597,30 @@ export default function Home() {
 
               {/* Choose a local folder from the browser */}
               <input
+                id="rebuildbot-folder-input"
                 ref={folderInputRef}
                 type="file"
                 webkitdirectory="true"
                 directory=""
                 multiple
                 onChange={handleFolderPick}
-                className="hidden"
+                className="sr-only"
               />
-              <button
-                type="button"
-                onClick={() => folderInputRef.current?.click()}
-                disabled={folderBusy || mode === 'url' || mode === 'self'}
-                title={mode !== 'none' && mode !== 'folder' ? 'Only one source can be active at a time. Use Reset to switch.' : 'Pick a folder from this computer'}
-                className="group mt-3 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+              <label
+                htmlFor="rebuildbot-folder-input"
+                title={
+                  mode !== 'none' && mode !== 'folder'
+                    ? 'Only one source can be active at a time. Use Reset to switch.'
+                    : 'Pick a folder from this computer'
+                }
+                className={`group mt-3 flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition ${
+                  loading || mode === 'url' || mode === 'self'
+                    ? 'pointer-events-none cursor-not-allowed opacity-40'
+                    : 'hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10'
+                }`}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88] transition group-hover:scale-105">
-                  {folderBusy ? (
+                  {loadingSource === 'folder' ? (
                     <RotateCcw className="h-[18px] w-[18px] animate-spin" strokeWidth={2.3} />
                   ) : (
                     <FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} />
@@ -621,7 +628,7 @@ export default function Home() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-bold text-[#0B132B]">
-                    {folderBusy ? 'Reading folder...' : 'Choose a local folder'}
+                    {loadingSource === 'folder' ? 'Reading folder...' : 'Choose a local folder'}
                   </p>
                   <p className="mt-0.5 text-[11.5px] leading-snug text-[#3D4560]/80">
                     {folderName
@@ -633,7 +640,7 @@ export default function Home() {
                   className="h-4 w-4 shrink-0 text-[#0B132B]/50 transition-transform group-hover:translate-x-1"
                   strokeWidth={2.4}
                 />
-              </button>
+              </label>
 
               {/* Score this project button */}
               <button
@@ -643,14 +650,18 @@ export default function Home() {
                   setInputCopied(false);
                   setInputError('');
                   setMode('self');
-                  runAnalysis({ allowEmpty: true });
+                  runAnalysis({ allowEmpty: true, source: 'self' });
                 }}
                 disabled={loading || mode === 'url' || mode === 'folder'}
                 title={mode !== 'none' && mode !== 'self' ? 'Only one source can be active at a time. Use Reset to switch.' : 'Run the checklist against this project'}
                 className="group mt-4 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88] transition group-hover:scale-105">
-                  <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  {loadingSource === 'self' ? (
+                    <RotateCcw className="h-[18px] w-[18px] animate-spin" strokeWidth={2.3} />
+                  ) : (
+                    <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-bold text-[#0B132B]">Score this project</p>
