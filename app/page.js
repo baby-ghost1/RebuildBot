@@ -75,6 +75,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [copiedFix, setCopiedFix] = useState('');
   const [inputCopied, setInputCopied] = useState(false);
+  const inputRef = useRef(null);
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
   const resultsRef = useRef(null);
 
@@ -137,7 +138,7 @@ export default function Home() {
 
   /**
    * The input action button has two states:
-   *  1. Copy  - copies the current input value to the clipboard
+   *  1. Paste  - pulls the latest text from the clipboard into the input
    *  2. Clear - turns into a bin icon and clears the input on click
    */
   const handleInputAction = async () => {
@@ -146,12 +147,20 @@ export default function Home() {
       setInputCopied(false);
       return;
     }
-    if (!repoPath) return;
     try {
-      await navigator.clipboard.writeText(repoPath);
+      setError('');
+      const text = await navigator.clipboard.readText();
+      setRepoPath(text);
       setInputCopied(true);
+      // Keep the caret in the field so the user can carry on editing
+      inputRef.current?.focus();
     } catch {
-      setError('Clipboard access was blocked by this browser.');
+      // The browser blocked clipboard reads. Focus the field so a manual
+      // Ctrl+V still works and say exactly what happened.
+      setError(
+        'The browser blocked clipboard access. Click the field and press Ctrl+V to paste.'
+      );
+      inputRef.current?.focus();
     }
   };
 
@@ -370,6 +379,7 @@ export default function Home() {
                     strokeWidth={2.2}
                   />
                   <input
+                    ref={inputRef}
                     type="text"
                     value={repoPath}
                     onChange={(e) => {
@@ -383,10 +393,9 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleInputAction}
-                    disabled={!repoPath && !inputCopied}
-                    title={inputCopied ? 'Clear the field' : 'Copy to clipboard'}
-                    aria-label={inputCopied ? 'Clear the field' : 'Copy to clipboard'}
-                    className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    title={inputCopied ? 'Clear the field' : 'Paste from clipboard'}
+                    aria-label={inputCopied ? 'Clear the field' : 'Paste from clipboard'}
+                    className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg border transition ${
                       inputCopied
                         ? 'border-rose-300/70 bg-rose-100 text-rose-600 hover:border-rose-400 hover:bg-rose-200'
                         : 'border-[#39FF88]/50 bg-[#39FF88]/15 text-[#0B132B] hover:border-[#39FF88] hover:bg-[#39FF88]/35'
