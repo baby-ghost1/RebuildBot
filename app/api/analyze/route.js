@@ -5,10 +5,12 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const { repoPath } = body;
-    const target = repoPath || process.cwd();
-    const report = analyzeRepo(target);
+    const report = analyzeRepo(repoPath || '.');
     return NextResponse.json({ success: true, report });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: err.message || 'Analysis failed' },
+      { status: 400 }
+    );
   }
 }

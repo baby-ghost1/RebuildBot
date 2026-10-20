@@ -27,7 +27,23 @@ import {
   ListChecks,
   Gauge,
   Zap,
+  Wrench,
 } from 'lucide-react';
+
+// Copy and paste ready fix for every failing checklist item
+const FIX_HINTS = {
+  lockfile: 'npm install',
+  'version-pin': 'echo "22" > .nvmrc',
+  dockerfile: 'cp rebuildbot/Dockerfile .',
+  'docker-base': 'FROM node:22-slim',
+  'test-command': '"test": "jest --ci --runInBand"',
+  readme: 'Write a README.md with setup, run and test steps',
+  'env-example': 'cp .env.example .env',
+  'no-hardcoded-paths': 'Replace the absolute path with a relative one',
+  git: 'git init && git add . && git commit -m "init"',
+  dockerignore: 'echo "node_modules" > .dockerignore',
+  gitignore: 'echo "node_modules" > .gitignore',
+};
 
 const STEPS = [
   {
@@ -341,7 +357,14 @@ export default function Home() {
               {error && (
                 <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
                   <CircleAlert className="mt-px h-4 w-4 shrink-0" strokeWidth={2.2} />
-                  {error}
+                  <span>
+                    {error}
+                    {error.startsWith('Path not found') && (
+                      <span className="mt-1 block text-[11.5px] font-normal text-rose-600">
+                        Use the full absolute path, for example C:\projects\my-app
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
             </div>
@@ -437,6 +460,33 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Fix guide - only when something is failing */}
+            {failureCount > 0 && (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-amber-300/50 bg-amber-50/60 backdrop-blur-xl">
+                <div className="flex items-center gap-2 border-b border-amber-300/40 px-5 py-3">
+                  <Wrench className="h-4 w-4 text-amber-700" strokeWidth={2.2} />
+                  <h4 className="text-[12px] font-bold uppercase tracking-[0.12em] text-amber-800">
+                    What to do next
+                  </h4>
+                </div>
+                <div className="grid gap-3 p-5 sm:grid-cols-2">
+                  {report.checks
+                    .filter((c) => !c.pass)
+                    .map((c) => (
+                      <div key={c.id} className="rounded-xl border border-amber-300/40 bg-white/70 p-3.5">
+                        <p className="text-[12.5px] font-bold text-[#0B132B]">{c.label}</p>
+                        <p className="mt-1 text-[11.5px] leading-relaxed text-[#3D4560]">{c.detail}</p>
+                        {FIX_HINTS[c.id] && (
+                          <pre className="mt-2.5 overflow-x-auto rounded-lg bg-[#0B132B] p-2.5 font-mono text-[10.5px] leading-relaxed text-[#39FF88]">
+                            <code>{FIX_HINTS[c.id]}</code>
+                          </pre>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Judge command */}
             <div className="mt-4 overflow-hidden rounded-2xl border border-[#0B132B]/8 bg-white/60 shadow-soft backdrop-blur-xl">

@@ -156,6 +156,20 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(report.passed).toBe(report.total);
   });
 
+  test('Analyzer throws a clear error for a missing path', () => {
+    const analyzer = require('../lib/analyzer.js');
+    const run = analyzer.default ? analyzer.default : analyzer;
+    expect(() => run('this-folder-does-not-exist-12345')).toThrow(/Path not found/);
+  });
+
+  test('Analyzer resolves relative paths to an absolute path', () => {
+    const analyzer = require('../lib/analyzer.js');
+    const run = analyzer.default ? analyzer.default : analyzer;
+    const report = run('.');
+    expect(path.isAbsolute(report.repoPath)).toBe(true);
+    expect(report.repoPath).toBe(path.resolve(projectRoot));
+  });
+
   test('Analyzer reports every checklist item as passing', () => {
     const analyzer = require('../lib/analyzer.js');
     const report = analyzer.default ? analyzer.default(projectRoot) : analyzer(projectRoot);
