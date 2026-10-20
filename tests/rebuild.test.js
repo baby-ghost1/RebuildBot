@@ -1,8 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs = require('fs');
+const path = require('path');
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..');
 
 describe('RebuildBot — Buildathon checklist', () => {
@@ -42,8 +40,8 @@ describe('RebuildBot — Buildathon checklist', () => {
     expect(pkg.scripts.test).toContain('jest');
   });
 
-  test('No hardcoded user paths in src/', () => {
-    const srcDir = path.join(projectRoot, 'src');
+  test('No hardcoded user paths in app/', () => {
+    const appDir = path.join(projectRoot, 'app');
     const walk = (dir) => {
       let found = false;
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -57,6 +55,13 @@ describe('RebuildBot — Buildathon checklist', () => {
       }
       return found;
     };
-    expect(walk(srcDir)).toBe(false);
+    expect(walk(appDir)).toBe(false);
+  });
+
+  test('Next.js app structure exists', () => {
+    expect(fs.existsSync(path.join(projectRoot, 'app', 'page.js'))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, 'app', 'layout.js'))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, 'app', 'api', 'analyze', 'route.js'))).toBe(true);
+    expect(fs.existsSync(path.join(projectRoot, 'lib', 'analyzer.js'))).toBe(true);
   });
 });
