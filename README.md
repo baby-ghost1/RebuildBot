@@ -123,8 +123,13 @@ It checks the pages, the health route, all three analysis modes (local folder, G
 Judges run this on a clean Linux machine with **no internet**:
 
 ```bash
-docker build -t rebuildbot . && docker run --rm --network none rebuildbot npm test
+docker build -t rebuildbot .
+docker run --rm --network none rebuildbot npm test
 ```
+
+> On Windows PowerShell 5.1, `&&` is not a valid statement separator. Run the two
+> commands one after the other, or join them with `;`. On Linux, macOS and
+> PowerShell 7 the `&&` form works as a single line.
 
 - `docker build` installs exact dependency versions from `package-lock.json` and runs `npm test` + `npm run build`
 - `docker run --network none` disables all networking

@@ -893,13 +893,16 @@ export default function Home() {
                   <span className="text-white/30">{' && '}</span>
                   <code>docker run --rm</code>
                   <span className="text-white/30"> </span>
-                  <code>--network none</code>
-                  <span className="text-white/30"> </span>
+                  <code>--network none</code>                  <span className="text-white/30"> </span>
                   <code>rebuildbot npm test</code>
                 </pre>
                 <p className="mt-3 max-w-[68ch] text-[12px] leading-relaxed text-[#3D4560]/75">
                   Runs on a clean Linux machine with no internet. The tests must still pass, which
                   is exactly what proves the project rebuilds.
+                </p>
+                <p className="mt-2 max-w-[68ch] text-[11px] leading-relaxed text-[#3D4560]/60">
+                  On Windows PowerShell 5.1 the <code className="font-mono">&amp;&amp;</code> is
+                  not a valid separator. Run the two commands one after the other instead.
                 </p>
               </div>
             </div>
