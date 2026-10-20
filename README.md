@@ -1,62 +1,131 @@
-# RebuildBot
+# RebuildBot 🤖
 
-**OmniRush RebuildBot** — Automatically rebuilds projects in Docker with offline tests.
+**OmniRush Frontier Buildathon 2026** — A full-stack app that checks any repository for *rebuild-readiness* using the official Buildathon judging checklist, and shows a live score.
 
-## What it does
-- **OmniRush sub-agents** (via `omnirush` CLI) build, test, and merge code
-- **Docker container** that runs tests offline (no internet needed)
-- **Automatic rebuild** — judges can rebuild your project from scratch
-- **Zero API keys** — uses only free OmniRush features
+Judges rebuild every project from scratch in Docker on a clean Linux machine and run its tests **offline**. RebuildBot makes that checklist visible, testable, and automatic.
 
-## How to use
+---
 
-1. **Install OmniRush** (if not installed):
-   ```bash
-   npm install -g omnirush
-   omnirush login
-   ```
+## ✨ What it does
 
-2. **Join the Buildathon**:
-   - Register on Unstop: https://unstop.com/p/omnirush-agentic-buildathon-2026-omnirush-1769914
-   - Or join via console: https://omnirush.ai/console/buildathon?join=1
+- **Live rebuild score** — analyzes a repo and scores it 0–100 against the Buildathon checklist
+- **9 checklist checks** — lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo
+- **One-click analysis** — paste a path, hit "Run Analysis", see pass/fail instantly
+- **Judge command shown** — the exact `docker build && docker run --network none` command the judges will run
+- **Zero API keys** — uses only free OmniRush features and standard open-source libraries
 
-3. **Start your project**:
-   ```bash
-   cd rebuildbot
-   npm install
-   npm run dev   # starts Vite dev server
-   ```
+## 🛠 Tech stack
 
-4. **OmniRush will create sessions** — you see progress bars in the dashboard.
+| Layer | Tech |
+|-------|------|
+| Frontend | React 18 + Vite + Tailwind CSS |
+| Backend | Node.js 22 + Express |
+| Tests | Jest + custom analyzer test |
+| Container | Docker (`node:22-slim`), offline-capable |
+| Build | Vite build served by Express in production |
 
-5. **Submit** before **20 Oct 11:59 PM IST**
+---
 
-## Why judges love it
-- ✅ **Rebuilds first time** — OmniRush runs Docker on clean Linux, tests offline
-- ✅ **Tests pass without internet** — `docker run --network none`
-- ✅ **Clear documentation** — README, Dockerfile, .env.example
-- ✅ **Sub-agent workflow** — SWARM pattern (frontend + backend + tests)
+## 🚀 Quick start
 
-## Quick start
 ```bash
-# Clone
-git clone https://github.com/your-org/rebuildbot.git
-cd rebuildbot
-
-# Install
+# 1. Install dependencies
 npm install
 
-# Run dev server
+# 2. Start dev (API on :5000 + Vite on :5173)
 npm run dev
-
-# In another terminal, start OmniRush
-omnirush buildathon
 ```
 
-## Requirements
-- Node.js 22+
-- Docker (for submission)
-- OmniRush account (free)
+Then open **http://localhost:5173** in your browser.
 
-## License
+### Run only the API
+```bash
+npm run server
+```
+
+### Run only the frontend
+```bash
+npm run client
+```
+
+## 🧪 Test it
+
+```bash
+npm test
+```
+
+Runs 7 offline tests that verify the Dockerfile, lockfile, `.nvmrc`, README, `.env.example`, test script, and absence of hardcoded paths. **No internet required.**
+
+## 🐳 Rebuild it like a judge
+
+Judges run this on a clean Linux machine with **no internet**:
+
+```bash
+docker build -t rebuildbot . && docker run --rm --network none rebuildbot npm test
+```
+
+- `docker build` installs exact dependency versions from `package-lock.json`
+- `docker run --network none` disables all networking
+- `npm test` must still pass — that's the proof it rebuilds
+
+## 📦 Build for production
+
+```bash
+npm run build     # builds the React app into /dist
+npm start         # Express serves /dist + API on port 5000
+```
+
+Then open **http://localhost:5000**.
+
+---
+
+## 📁 Project structure
+
+```
+rebuildbot/
+├─ .nvmrc              # pins Node 22
+├─ .env.example        # env template (no secrets)
+├─ .gitignore
+├─ Dockerfile          # offline rebuildable
+├─ package.json
+├─ package-lock.json   # exact dependency versions
+├─ index.html          # Vite entry
+├─ vite.config.js
+├─ tailwind.config.js
+├─ postcss.config.js
+├─ src/
+│  ├─ server/
+│  │   ├─ index.js     # Express API
+│  │   └─ analyzer.js  # rebuild-readiness logic
+│  └─ client/
+│      ├─ main.jsx     # React entry
+│      ├─ App.jsx      # dashboard UI
+│      └─ index.css    # Tailwind
+└─ tests/
+   └─ rebuild.test.js  # 7 offline checklist tests
+```
+
+## 🔑 API endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/analyze` | Analyze a repo path `{ repoPath? }` and return a rebuild report |
+
+## 🏆 Why this meets the judging criteria
+
+- **It works** — run `npm run dev`, open the dashboard, analysis runs live
+- **It's worth using** — any dev preparing for a Buildathon/hackathon can check their repo in 2 seconds
+- **It rebuilds** — `docker build && docker run --network none npm test` passes offline
+- **OmniRush built it** — frontend, backend, tests, and docs were generated in OmniRush sub-agent sessions
+
+---
+
+## 📝 License
+
 MIT
+
+## 🔗 Links
+
+- Buildathon: [omnirush.ai/buildathon](https://omnirush.ai/buildathon)
+- Repo: [github.com/baby-ghost1/RebuildBot](https://github.com/baby-ghost1/RebuildBot)
