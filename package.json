@@ -6,6 +6,11 @@
     "dev": "next dev -p 5173",
     "build": "next build",
     "start": "next start -p 5000",
+    "serve": "node scripts/serve.js start",
+    "serve:dev": "node scripts/serve.js start dev",
+    "serve:stop": "node scripts/serve.js stop",
+    "serve:status": "node scripts/serve.js status",
+    "serve:restart": "node scripts/serve.js restart",
     "test": "jest --ci --runInBand"
   },
   "engines": {

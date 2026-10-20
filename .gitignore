@@ -13,6 +13,8 @@ out/
 # Logs
 *.log
 npm-debug.log*
+.server.pid
+.server.log
 
 # OS files
 .DS_Store

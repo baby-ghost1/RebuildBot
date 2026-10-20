@@ -51,6 +51,61 @@
     background-color: var(--color-neon);
     color: var(--color-navy);
   }
+
+  /* Custom themed scrollbar */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-navy) transparent;
+  }
+
+  body::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--color-navy);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-neon);
+  }
+
+  body::-webkit-scrollbar-thumb:active {
+    background-color: var(--color-navy);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-navy) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-navy);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-neon);
+  }
 }
 
 @layer components {

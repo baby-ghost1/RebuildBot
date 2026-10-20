@@ -28,6 +28,7 @@ import {
   Gauge,
   Zap,
   Wrench,
+  Globe,
 } from 'lucide-react';
 
 // Copy and paste ready fix for every failing checklist item
@@ -49,12 +50,12 @@ const STEPS = [
   {
     icon: FolderSearch,
     title: 'Point at a project',
-    body: 'Paste the absolute path of any repo folder, for example C:\\projects\\my-app. Leave it empty to score this very project.',
+    body: 'Paste a GitHub repository URL or a local folder path. Leave it empty to score this very project.',
   },
   {
     icon: Search,
     title: 'Run the analysis',
-    body: 'RebuildBot inspects eleven Buildathon checklist items against that folder and grades each one as pass or fail.',
+    body: 'RebuildBot clones the repo into a temp folder, inspects eleven Buildathon checklist items, and grades each one as pass or fail.',
   },
   {
     icon: ShieldCheck,
@@ -88,17 +89,37 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoPath: repoPath || undefined }),
       });
-      const data = await res.json();
-      if (data.success) {
+
+      // Read the body even on a non-2xx so the real reason is shown
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (!res.ok) {
+        setError(
+          data?.error ||
+          `Request failed with status ${res.status} ${res.statusText || ''}`.trim()
+        );
+        return;
+      }
+
+      if (data?.success) {
         setReport(data.report);
         setShowOnlyFailures(false);
       } else {
-        setError(data.error || 'Analysis failed');
+        setError(data?.error || 'Analysis failed for an unknown reason.');
       }
-    } catch {
-      setError('Could not reach the API. Make sure the server is running.');
+    } catch (e) {
+      setError(
+        `Could not reach the server: ${e?.message || 'network error'}. ` +
+          'Is the app still running on port 5000?'
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const copyCommand = async () => {
@@ -270,13 +291,16 @@ export default function Home() {
             <div className="grid gap-5 p-5 md:grid-cols-[1.4fr_1fr]">
               <div>
                 <p className="max-w-[52ch] text-[13px] leading-relaxed text-[#3D4560]">
-                  You are shipping a project from{' '}
+                  Paste a GitHub URL such as{' '}
+                  <code className="rounded-md border border-[#0B132B]/10 bg-[#0B132B]/5 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-[#0B132B]">
+                    https://github.com/owner/repo
+                  </code>
+                  , or point at a local folder like{' '}
                   <code className="rounded-md border border-[#0B132B]/10 bg-[#0B132B]/5 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-[#0B132B]">
                     C:\projects\my-app
                   </code>
-                  . Enter that path above and press{' '}
-                  <span className="font-semibold text-[#0B132B]">Run Analysis</span>. RebuildBot
-                  reports the score, and every failing row names the exact file to add or fix
+                  . RebuildBot clones the repository into a temporary folder, scores it, and
+                  cleans up afterwards. Every failing row names the exact file to add or fix
                   before the deadline.
                 </p>
                 <p className="mt-3 max-w-[52ch] text-[13px] leading-relaxed text-[#3D4560]">
@@ -327,7 +351,7 @@ export default function Home() {
                     value={repoPath}
                     onChange={(e) => setRepoPath(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && runAnalysis()}
-                    placeholder="Absolute path to a repo folder - leave empty to score this project"
+                    placeholder="GitHub URL or local folder path - leave empty to score this project"
                     className="w-full rounded-lg border border-[#0B132B]/12 bg-white/80 py-3 pl-11 pr-4 text-sm text-[#0B132B] outline-none transition placeholder:text-[#0B132B]/35 focus:border-[#39FF88] focus:neon-ring"
                   />
                 </div>
@@ -355,16 +379,20 @@ export default function Home() {
               </p>
 
               {error && (
-                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700">
-                  <CircleAlert className="mt-px h-4 w-4 shrink-0" strokeWidth={2.2} />
-                  <span>
-                    {error}
-                    {error.startsWith('Path not found') && (
-                      <span className="mt-1 block text-[11.5px] font-normal text-rose-600">
-                        Use the full absolute path, for example C:\projects\my-app
-                      </span>
-                    )}
-                  </span>
+                <div className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <CircleAlert className="mt-px h-4 w-4 shrink-0 text-rose-600" strokeWidth={2.2} />
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold text-rose-800">Analysis failed</p>
+                      <p className="mt-1 break-words font-mono text-[12px] leading-relaxed text-rose-700">
+                        {error}
+                      </p>
+                      <p className="mt-2 text-[11.5px] leading-relaxed text-rose-600">
+                        GitHub URLs must look like https://github.com/owner/repo. Local paths must
+                        be absolute, for example C:\projects\my-app.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -382,19 +410,22 @@ export default function Home() {
                   >
                     <span className="text-4xl font-black text-[#0B132B]">{report.score}</span>
                   </div>
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-[#0B132B]/10 bg-white px-2.5 py-0.5 text-[9px] font-bold text-[#0B132B]/60">
-                    out of 100
+                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-[#0B132B]/10 bg-white px-2.5 py-0.5 text-[9.5px] font-bold text-[#0B132B]/70">
+                    {report.score}% rebuild score
                   </div>
                 </div>
 
                 <div className="min-w-0 max-w-[46ch] flex-1 text-center sm:text-left">
                   <h3 className="text-xl font-extrabold tracking-tight text-[#0B132B]">
                     {report.passed} of {report.total} checks passed
-                  </h3>
-                  <p className="mt-1.5 max-w-[58ch] text-[14px] leading-relaxed text-[#3D4560]">{report.verdict}</p>
-                  <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-md border border-[#0B132B]/10 bg-[#FBFAF7] px-2.5 py-1 font-mono text-[10px] text-[#0B132B]/60">
-                    <Layers className="h-3 w-3" strokeWidth={2.2} />
-                    {report.repoPath}
+                  </h3>                  <p className="mt-1.5 max-w-[58ch] text-[14px] leading-relaxed text-[#3D4560]">{report.verdict}</p>
+                  <p className="mt-2.5 inline-flex max-w-full items-center gap-1.5 rounded-md border border-[#0B132B]/10 bg-[#FBFAF7] px-2.5 py-1 font-mono text-[10px] text-[#0B132B]/60">
+                    {report.source === 'github' ? (
+                      <Globe className="h-3 w-3 shrink-0" strokeWidth={2.2} />
+                    ) : (
+                      <FolderSearch className="h-3 w-3 shrink-0" strokeWidth={2.2} />
+                    )}
+                    <span className="truncate">{report.repoPath}</span>
                   </p>
                 </div>
               </div>
@@ -423,7 +454,7 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="grid gap-2 px-5 pb-5">
+                <div className="grid gap-3.5 px-5 pb-5">
                   {visibleChecks.length === 0 && (
                     <div className="rounded-lg border border-[#39FF88]/40 bg-[#39FF88]/10 px-4 py-5 text-center text-[12px] font-semibold text-[#0B132B]">
                       Every checklist item passes. This project rebuilds cleanly.
@@ -432,7 +463,7 @@ export default function Home() {
                   {visibleChecks.map((check) => (
                     <div
                       key={check.id}
-                      className={`flex items-start gap-3 rounded-lg border px-3.5 py-2.5 transition ${
+                      className={`flex items-start gap-3.5 rounded-xl border px-4 py-4 transition ${
                         check.pass
                           ? 'border-[#39FF88]/45 bg-[#39FF88]/8'
                           : 'border-rose-300/60 bg-rose-50/70'
@@ -440,18 +471,18 @@ export default function Home() {
                     >
                       {check.pass ? (
                         <CheckCircle2
-                          className="mt-px h-4 w-4 shrink-0 text-[#0B132B]"
+                          className="mt-px h-[18px] w-[18px] shrink-0 text-[#0B132B]"
                           strokeWidth={2.3}
                         />
                       ) : (
                         <XCircle
-                          className="mt-px h-4 w-4 shrink-0 text-rose-500"
+                          className="mt-px h-[18px] w-[18px] shrink-0 text-rose-500"
                           strokeWidth={2.3}
                         />
                       )}
                       <div className="min-w-0">
                         <p className="text-[13px] font-bold text-[#0B132B]">{check.label}</p>
-                        <p className="mt-0.5 max-w-[72ch] text-[12px] leading-relaxed text-[#3D4560]/80">
+                        <p className="mt-1 max-w-[72ch] text-[12px] leading-relaxed text-[#3D4560]/80">
                           {check.detail}
                         </p>
                       </div>

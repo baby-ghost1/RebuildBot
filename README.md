@@ -8,14 +8,16 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 
 ## ✨ What it does
 
-- **Live rebuild score** - analyzes a repo and scores it 0-100 against the Buildathon checklist
-- **11 checklist checks** - lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo, `.dockerignore`, `.gitignore`
-- **One-click analysis** - paste a path, hit "Run Analysis", see pass/fail instantly
-- **Refined interface** - warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
-- **How-to-use guide built in** - worked example shown right in the dashboard
-- **Failure filter** - one tap to hide passing checks and focus on what to fix
-- **Copy-to-clipboard** - grab the exact judge command with one click
-- **Zero API keys** - uses only free OmniRush features and standard open-source libraries
+- **Live rebuild score** — analyzes a repo and scores it 0-100 against the Buildathon checklist
+- **GitHub URL or local folder** — paste `https://github.com/owner/repo` and it shallow clones into a temp folder, or point at a local path
+- **11 checklist checks** — lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo, `.dockerignore`, `.gitignore`
+- **One-click analysis** — hit "Run Analysis", see pass/fail instantly
+- **Refined interface** — warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
+- **How-to-use guide built in** — worked example shown right in the dashboard
+- **Failure filter** — one tap to hide passing checks and focus on what to fix
+- **What to do next** — every failing item comes with a copy-paste fix command
+- **Copy-to-clipboard** — grab the exact judge command with one click
+- **Zero API keys** — uses only free OmniRush features and standard open-source libraries
 
 ## 🛠 Tech stack
 
@@ -24,9 +26,10 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 | Frontend | **Next.js 14** (App Router) + React 18 + **Tailwind CSS v4** |
 | Icons | **lucide-react** (SVG icon set, no emoji) |
 | Backend | Next.js API Routes (`/api/health`, `/api/analyze`) |
-| Core logic | `lib/analyzer.js` - 11-point rebuild-readiness analyzer |
-| Tests | Jest (14 offline tests) |
-| Container | Docker (`node:22-slim`), offline-capable |
+| Repo fetching | `git clone --depth 1` via `lib/github.js` |
+| Core logic | `lib/analyzer.js` — 11-point rebuild-readiness analyzer |
+| Tests | Jest (23 offline tests) |
+| Container | Docker (`node:22-slim` + `git`), offline-capable |
 
 ---
 
@@ -36,11 +39,26 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 # 1. Install dependencies
 npm install
 
-# 2. Start dev server (port 5173)
-npm run dev
+# 2. Start the server (runs detached, auto-restarts on crash)
+npm run serve
 ```
 
-Then open **http://localhost:5173** in your browser.
+Then open **http://localhost:5000** in your browser.
+
+### Server commands
+
+| Command | What it does |
+|---------|--------------|
+| `npm run serve` | Start the server detached. It keeps running until you stop it, and restarts itself if it crashes. |
+| `npm run serve:stop` | Stop the server |
+| `npm run serve:status` | Show whether it is running |
+| `npm run serve:restart` | Restart it |
+| `npm run dev` | Next.js dev server with hot reload on **http://localhost:5173** |
+| `npm run build` | Production build |
+| `npm start` | Run the production build in the foreground |
+
+> Do not run `npm run dev` and `npm run serve` at the same time. They share the same
+> `.next` folder and will fight over it.
 
 ## 🧪 Test it
 
@@ -48,7 +66,7 @@ Then open **http://localhost:5173** in your browser.
 npm test
 ```
 
-Runs **8 offline tests** that verify the Dockerfile, lockfile, `.nvmrc`, README, `.env.example`, test script, hardcoded paths, and Next.js structure. **No internet required.**
+Runs **23 offline tests** that verify the Dockerfile, lockfile, `.nvmrc`, README, `.env.example`, test script, hardcoded paths, Next.js structure, the self-hosted fonts, the GitHub URL parser, and that this project scores a perfect 100. **No internet required.**
 
 ## 🐳 Rebuild it like a judge
 
@@ -123,9 +141,12 @@ rebuildbot/
 │     ├─ health/route.js   # GET /api/health
 │     └─ analyze/route.js  # POST /api/analyze
 ├─ lib/
-│  └─ analyzer.js          # 9-point rebuild-readiness logic
+│  ├─ analyzer.js          # 11-point rebuild-readiness logic
+│  └─ github.js            # GitHub URL parser + shallow clone
+├─ scripts/
+│  └─ serve.js             # server supervisor (start/stop/status/restart)
 ├─ tests/
-│  └─ rebuild.test.js      # 8 offline checklist tests
+│  └─ rebuild.test.js      # 23 offline checklist tests
 ├─ .nvmrc                  # pins Node 22
 ├─ .env.example            # env template (no secrets)
 ├─ Dockerfile              # offline rebuildable

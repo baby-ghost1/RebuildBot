@@ -156,6 +156,54 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(report.passed).toBe(report.total);
   });
 
+  test('GitHub URL parser accepts the common repository URL forms', () => {
+    const { parseGithubUrl } = require('../lib/github.js');
+
+    const plain = parseGithubUrl('https://github.com/baby-ghost1/RebuildBot');
+    expect(plain).toEqual({
+      owner: 'baby-ghost1',
+      repo: 'RebuildBot',
+      branch: null,
+      url: 'https://github.com/baby-ghost1/RebuildBot.git',
+    });
+
+    expect(parseGithubUrl('https://github.com/owner/repo.git').repo).toBe('repo');
+    expect(parseGithubUrl('http://github.com/owner/repo').owner).toBe('owner');
+    expect(parseGithubUrl('https://www.github.com/owner/repo').owner).toBe('owner');
+    expect(parseGithubUrl('git@github.com:owner/repo.git').url).toBe(
+      'https://github.com/owner/repo.git'
+    );
+
+    const branch = parseGithubUrl('https://github.com/owner/repo/tree/dev');
+    expect(branch.branch).toBe('dev');
+    expect(branch.url).toBe('https://github.com/owner/repo.git');
+  });
+
+  test('GitHub URL parser rejects anything that is not a GitHub repo', () => {
+    const { parseGithubUrl } = require('../lib/github.js');
+    expect(parseGithubUrl('')).toBeNull();
+    expect(parseGithubUrl('C:\\projects\\my-app')).toBeNull();
+    expect(parseGithubUrl('https://gitlab.com/owner/repo')).toBeNull();
+    expect(parseGithubUrl('https://evil.com/owner/repo')).toBeNull();
+    expect(parseGithubUrl('not a url')).toBeNull();
+  });
+
+  test('The analyze route module loads without errors', () => {
+    const fs2 = require('fs');
+    const path2 = require('path');
+    const route = path2.join(projectRoot, 'app', 'api', 'analyze', 'route.js');
+    expect(fs2.existsSync(route)).toBe(true);
+    const content = fs2.readFileSync(route, 'utf8');
+    expect(content).toMatch(/parseGithubUrl/);
+    expect(content).toMatch(/cloneRepo/);
+    expect(content).toMatch(/cleanupClone/);
+  });
+
+  test('Docker image includes git so GitHub URLs can be cloned', () => {
+    const content = fs.readFileSync(path.join(projectRoot, 'Dockerfile'), 'utf8');
+    expect(content).toMatch(/apt-get install[^\n]*\bgit\b/);
+  });
+
   test('Analyzer throws a clear error for a missing path', () => {
     const analyzer = require('../lib/analyzer.js');
     const run = analyzer.default ? analyzer.default : analyzer;
