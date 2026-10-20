@@ -56,6 +56,12 @@ async function get(path, timeout = 60_000) {
   check('page has the score this project button', home.text.includes('Score this project'));
   check('page has no auto analysis on load', !home.text.includes('runAnalysis()'));
   check('no emoji in the page markup', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(home.text));
+  check(
+    'run analysis needs input, the empty case is explained',
+    home.text.includes('Paste a GitHub URL or a local folder path first') ||
+      (home.text.includes('GitHub URL or local folder path')),
+    'validation message or placeholder missing'
+  );
 
   const health = await get('/api/health');
   check('GET /api/health returns 200', health.status === 200, `status=${health.status}`);

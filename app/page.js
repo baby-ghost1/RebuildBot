@@ -76,6 +76,10 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [copiedFix, setCopiedFix] = useState('');
   const [inputCopied, setInputCopied] = useState(false);
+  const [inputError, setInputError] = useState('');
+  // Which source the user is currently working with. Only one is active at a
+  // time, so the other inputs are disabled and stay out of the way.
+  const [mode, setMode] = useState('none'); // none | url | folder | self
   const [folderName, setFolderName] = useState('');
   const [folderBusy, setFolderBusy] = useState(false);
   const inputRef = useRef(null);
@@ -115,7 +119,18 @@ export default function Home() {
     };
   }, []);
 
-  const runAnalysis = async () => {
+  const runAnalysis = async (options = {}) => {
+    const { allowEmpty = false } = options;
+    const target = repoPath.trim();
+
+    // The Run Analysis button needs something to work on. The "Score this
+    // project" button passes allowEmpty because it has its own target.
+    if (!target && !allowEmpty) {
+      setInputError('Paste a GitHub URL or a local folder path first.');
+      return;
+    }
+
+    setInputError('');
     setLoading(true);
     setError('');
     try {
@@ -225,6 +240,7 @@ export default function Home() {
       setFolderName(rootName);
       setReport(data.report);
       setShowOnlyFailures(false);
+      setMode('folder');
     } catch (e) {
       setError(`Could not read the selected folder: ${e?.message || 'unknown error'}`);
     } finally {
@@ -241,6 +257,8 @@ export default function Home() {
     if (inputCopied) {
       setRepoPath('');
       setInputCopied(false);
+      setInputError('');
+      setMode('none');
       return;
     }
     try {
@@ -248,6 +266,7 @@ export default function Home() {
       const text = await navigator.clipboard.readText();
       setRepoPath(text);
       setInputCopied(true);
+      setMode(text.trim() ? 'url' : 'none');
       // Keep the caret in the field so the user can carry on editing
       inputRef.current?.focus();
     } catch {
@@ -462,9 +481,28 @@ export default function Home() {
                 <Boxes className="h-4 w-4 text-[#0B132B]" strokeWidth={2.2} />
                 <h2 className="text-sm font-bold tracking-tight text-[#0B132B]">Analyze a repository</h2>
               </div>
-              <span className="rounded-full border border-[#0B132B]/10 bg-white/70 px-3 py-1 font-mono text-[10px] font-semibold text-[#0B132B]/60">
-                POST /api/analyze
-              </span>
+              <div className="flex items-center gap-2">
+                {mode !== 'none' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRepoPath('');
+                      setInputCopied(false);
+                      setInputError('');
+                      setMode('none');
+                      setFolderName('');
+                      setReport(null);
+                      setError('');
+                    }}
+                    className="rounded-full border border-[#0B132B]/12 bg-white/70 px-3 py-1 text-[10.5px] font-semibold text-[#0B132B] transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    Reset
+                  </button>
+                )}
+                <span className="rounded-full border border-[#0B132B]/10 bg-white/70 px-3 py-1 font-mono text-[10px] font-semibold text-[#0B132B]/60">
+                  POST /api/analyze
+                </span>
+              </div>
             </div>
 
             <div className="p-5 sm:p-6">
@@ -478,13 +516,20 @@ export default function Home() {
                     ref={inputRef}
                     type="text"
                     value={repoPath}
+                    disabled={mode === 'folder' || mode === 'self'}
                     onChange={(e) => {
                       setRepoPath(e.target.value);
                       if (inputCopied) setInputCopied(false);
+                      if (inputError) setInputError('');
+                      setMode(e.target.value.trim() ? 'url' : 'none');
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && runAnalysis()}
                     placeholder="GitHub URL or local folder path - leave empty to score this project"
-                    className="w-full rounded-lg border border-[#0B132B]/12 bg-white/80 py-3 pl-11 pr-12 text-sm text-[#0B132B] outline-none transition placeholder:text-[#0B132B]/35 focus:border-[#39FF88] focus:neon-ring"
+                    className={`w-full rounded-lg border bg-white/80 py-3 pl-11 pr-12 text-sm text-[#0B132B] outline-none transition placeholder:text-[#0B132B]/35 focus:neon-ring ${
+                      inputError
+                        ? 'border-rose-400 focus:border-rose-400'
+                        : 'border-[#0B132B]/12 focus:border-[#39FF88]'
+                    }`}
                   />
                   <button
                     type="button"
@@ -505,9 +550,16 @@ export default function Home() {
                   </button>
                 </div>
                 <button
-                  onClick={runAnalysis}
-                  disabled={loading}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0B132B] px-6 py-3 text-sm font-bold text-[#39FF88] transition hover:-translate-y-0.5 hover:bg-[#111c3a] disabled:translate-y-0 disabled:opacity-60"
+                  onClick={() => runAnalysis()}
+                  disabled={loading || mode !== 'url' || !repoPath.trim()}
+                  title={
+                    mode !== 'url'
+                      ? 'Only one source can be active at a time. Use Reset to switch.'
+                      : !repoPath.trim()
+                        ? 'Paste a GitHub URL or a local folder path first'
+                        : 'Run analysis'
+                  }
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0B132B] px-6 py-3 text-sm font-bold text-[#39FF88] transition hover:-translate-y-0.5 hover:bg-[#111c3a] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {loading ? (
                     <>
@@ -527,6 +579,22 @@ export default function Home() {
                 Press Enter to run, or use one of the buttons below.
               </p>
 
+              {inputError && (
+                <p className="mt-2 flex items-center gap-1.5 text-[11.5px] font-medium text-rose-600">
+                  <CircleAlert className="h-3.5 w-3.5 shrink-0" strokeWidth={2.3} />
+                  {inputError}
+                </p>
+              )}
+
+              {mode !== 'none' && !inputError && (
+                <p className="mt-2 flex items-center gap-1.5 text-[11.5px] font-medium text-[#0B132B]/55">
+                  <Check className="h-3.5 w-3.5 shrink-0 text-[#0B132B]" strokeWidth={2.6} />
+                  {mode === 'url' && 'Using the URL or path in the input box.'}
+                  {mode === 'folder' && `Using the folder "${folderName}" from this computer.`}
+                  {mode === 'self' && 'Using this project own source repository.'}
+                </p>
+              )}
+
               {/* Choose a local folder from the browser */}
               <input
                 ref={folderInputRef}
@@ -540,8 +608,9 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => folderInputRef.current?.click()}
-                disabled={folderBusy}
-                className="group mt-3 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:opacity-60"
+                disabled={folderBusy || mode === 'url' || mode === 'self'}
+                title={mode !== 'none' && mode !== 'folder' ? 'Only one source can be active at a time. Use Reset to switch.' : 'Pick a folder from this computer'}
+                className="group mt-3 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88] transition group-hover:scale-105">
                   {folderBusy ? (
@@ -572,10 +641,13 @@ export default function Home() {
                 onClick={() => {
                   setRepoPath('');
                   setInputCopied(false);
-                  runAnalysis();
+                  setInputError('');
+                  setMode('self');
+                  runAnalysis({ allowEmpty: true });
                 }}
-                disabled={loading}
-                className="group mt-4 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:opacity-60"
+                disabled={loading || mode === 'url' || mode === 'folder'}
+                title={mode !== 'none' && mode !== 'self' ? 'Only one source can be active at a time. Use Reset to switch.' : 'Run the checklist against this project'}
+                className="group mt-4 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88] transition group-hover:scale-105">
                   <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />
