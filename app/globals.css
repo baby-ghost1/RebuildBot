@@ -1,28 +1,69 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
-  --color-primary: #5B3DF5;
-  --color-accent: #FF6115;
-  --color-light: #F0F2F5;
-  --color-dark: #23262F;
-  --color-navy: #0B132B;
-  --color-green: #39FF88;
-  --color-purple: #6A00F4;
-  --color-peach: #FFD6A5;
-  --color-lime: #B6FF2E;
-  --color-lavender: #E8DEFF;
-  --color-violet: #7A35FF;
-  --color-cream: #FFFCF4;
-  --color-forest: #18251D;
-  --color-lime2: #B7FF72;
+@theme {
+  /* Primary palette */
+  --color-navy: #0b132b;
+  --color-neon: #39ff88;
+
+  /* Supporting neutrals */
+  --color-paper: #fbfaf7;
+  --color-ink: #0b132b;
+  --color-ink-soft: #3d4560;
+
+  --radius-xl2: 1.25rem;
+  --shadow-soft: 0 1px 2px rgb(11 19 43 / 0.04), 0 12px 32px -8px rgb(11 19 43 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(11 19 43 / 0.05), 0 24px 56px -12px rgb(11 19 43 / 0.20);
 }
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--color-light);
-  color: var(--color-dark);
-  transition: background 0.3s, color 0.3s;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family:
+      'Inter',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-neon);
+    color: var(--color-navy);
+  }
+}
+
+@layer components {
+  .backdrop-blur-panel {
+    background-color: rgb(255 255 255 / 0.72);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgb(11 19 43 / 0.08);
+  }
+
+  .backdrop-blur-dark {
+    background-color: rgb(11 19 43 / 0.72);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  .grid-veil {
+    background-image:
+      linear-gradient(to right, rgb(11 19 43 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(11 19 43 / 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  .neon-ring {
+    box-shadow:
+      0 0 0 1px rgb(57 255 136 / 0.35),
+      0 0 24px -6px rgb(57 255 136 / 0.45);
+  }
 }

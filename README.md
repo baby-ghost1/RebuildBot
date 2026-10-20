@@ -11,15 +11,16 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 - **Live rebuild score** — analyzes a repo and scores it 0–100 against the Buildathon checklist
 - **9 checklist checks** — lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo
 - **One-click analysis** — paste a path, hit "Run Analysis", see pass/fail instantly
-- **7 switchable color themes** — Navy & Green, Blue & Lavender, Purple & Peach, Lime & Dark, Violet & Light, Forest & Lime, Orange & Cream
-- **How-to-use guide built in** — examples shown right in the dashboard
+- **Refined interface** — warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
+- **How-to-use guide built in** — worked example shown right in the dashboard
 - **Zero API keys** — uses only free OmniRush features and standard open-source libraries
 
 ## 🛠 Tech stack
 
 | Layer | Tech |
 |-------|------|
-| Frontend | **Next.js 14** (App Router) + React 18 + Tailwind CSS |
+| Frontend | **Next.js 14** (App Router) + React 18 + **Tailwind CSS v4** |
+| Icons | **lucide-react** (SVG icon set, no emoji) |
 | Backend | Next.js API Routes (`/api/health`, `/api/analyze`) |
 | Core logic | `lib/analyzer.js` — 9-point rebuild-readiness analyzer |
 | Tests | Jest (8 offline tests) |
@@ -70,19 +71,22 @@ Then open **http://localhost:5000**.
 
 ---
 
-## 🎨 Color themes
+## 🎨 Design system
 
-Click the **🎨 theme button** in the header to cycle through 7 pairs:
+Single fixed palette, no theme toggle.
 
-| Theme | Colors |
-|-------|--------|
-| Navy & Green | `#0B132B` + `#39FF88` |
-| Blue & Lavender | `#5B3DF5` + `#E8DEFF` |
-| Purple & Peach | `#6A00F4` + `#FFD6A5` |
-| Lime & Dark | `#B6FF2E` + `#23262F` |
-| Violet & Light | `#7A35FF` + `#F0F2F5` |
-| Forest & Lime | `#18251D` + `#B7FF72` |
-| Orange & Cream | `#FF6115` + `#FFFCF4` |
+| Role | Color | Usage |
+|------|-------|-------|
+| Primary / ink | `#0B132B` | Headings, dark panels, buttons, code blocks |
+| Accent | `#39FF88` | Highlights, icons on dark, score gradients, focus rings |
+| Surface | `#FBFAF7` | Warm-white page background (not grey) |
+| Text | `#3D4560` | Body copy, secondary labels |
+
+Panels use a translucent white fill with `backdrop-filter: blur()`, layered over a soft grid
+veil and two blurred colour blooms for depth.
+
+Tailwind v4 is configured in CSS via `@theme` in `app/globals.css` — there is no
+`tailwind.config.js` file.
 
 ---
 
@@ -92,8 +96,8 @@ Click the **🎨 theme button** in the header to cycle through 7 pairs:
 rebuildbot/
 ├─ app/
 │  ├─ layout.js            # Root layout
-│  ├─ page.js              # Dashboard UI + theme switcher
-│  ├─ globals.css          # Tailwind + theme CSS vars
+│  ├─ page.js              # Dashboard UI (lucide icons, no emoji)
+│  ├─ globals.css          # Tailwind v4 @theme + backdrop utilities
 │  └─ api/
 │     ├─ health/route.js   # GET /api/health
 │     └─ analyze/route.js  # POST /api/analyze
@@ -105,8 +109,7 @@ rebuildbot/
 ├─ .env.example            # env template (no secrets)
 ├─ Dockerfile              # offline rebuildable
 ├─ next.config.js
-├─ tailwind.config.js
-├─ postcss.config.js
+├─ postcss.config.js       # @tailwindcss/postcss
 ├─ jest.config.js
 ├─ package.json
 └─ package-lock.json       # exact dependency versions
