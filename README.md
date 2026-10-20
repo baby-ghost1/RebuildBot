@@ -213,8 +213,21 @@ rebuildbot/
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/health` | Health check |
-| POST | `/api/analyze` | Analyze a repo path `{ repoPath? }` and return a rebuild report |
+| GET | `/api/health` | Health check. Always sends `no-store` so it is never served from a cache. |
+| POST | `/api/analyze` | Analyze a project and return a rebuild report. Accepts `{ repoPath }` for a GitHub URL or a local path, or `{ files, folderName, hasGit }` for a folder picked in the browser. |
+
+## 🔑 Environment variables
+
+| Variable | Required | What it does |
+|----------|----------|--------------|
+| `PORT` | No | Port the server binds to. Falls back to `5000`. Hosts like Render and Railway inject their own. |
+| `GITHUB_TOKEN` | No | Raises the GitHub API rate limit from 60 to 5000 requests per hour and allows private repos. Free at [github.com/settings/tokens](https://github.com/settings/tokens). |
+| `SELF_REPO_URL` | No | Which repository to score when the input is left empty. On Vercel it is detected automatically. |
+| `NEXT_TELEMETRY_DISABLED` | No | Set to `1` to keep Next.js from phoning home. Already set in the Dockerfile. |
+
+Without a token each analysis costs 2 GitHub API calls, which is around 30 analyses per
+hour. The tree is cached, so repeating the same repository costs nothing. Add a token on a
+public deployment to remove the limit entirely.
 
 ## 🏆 Why this meets the judging criteria
 
