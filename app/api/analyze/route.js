@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import analyzeRepo, { analyzeSource } from '../../../lib/analyzer.js';
 import { createMemorySource } from '../../../lib/source.js';
-import { parseGithubUrl, cloneRepo, cleanupClone } from '../../../lib/github.js';
+import { parseGithubUrl, createGitHubSource } from '../../../lib/github.js';
 
-// Cloning a repository can take a while, so allow a longer budget on
-// serverless hosts such as Vercel.
+// Reading a repository over the GitHub API can take a moment, so allow a
+// longer budget on serverless hosts such as Vercel.
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
@@ -29,13 +29,11 @@ function getSelfRepoUrl() {
 }
 
 export async function POST(request) {
-  let cloneDir = null;
-
   try {
     const body = await request.json();
     const input = (body.repoPath || '').trim();
 
-    // 0. A folder the user picked in their browser. The files are read on
+    // 1. A folder the user picked in their browser. The files are read on
     //    the client and sent here, so this works on a hosted deployment
     //    where the server cannot see the user's disk.
     if (body.files && typeof body.files === 'object') {
@@ -51,21 +49,21 @@ export async function POST(request) {
       return NextResponse.json({ success: true, report });
     }
 
-    // 1. An explicit GitHub URL, or this deployment's own repository
+    // 2. A GitHub URL, or this deployment's own repository
     const selfRepo = input ? null : getSelfRepoUrl();
     const github = parseGithubUrl(input || selfRepo || '');
 
     if (github) {
-      cloneDir = await cloneRepo(github);
-      const report = analyzeRepo(cloneDir, {
-        display: github.url.replace(/\.git$/, ''),
+      const source = await createGitHubSource(github.owner, github.repo, github.branch);
+      const report = analyzeSource(source, {
+        display: source.display,
         source: 'github',
         isSelf: !input,
       });
       return NextResponse.json({ success: true, report });
     }
 
-    // 2. Local folder path -> analyze directly
+    // 3. A local folder path -> analyse directly on disk
     const report = analyzeRepo(input || '.', { source: 'local' });
     return NextResponse.json({ success: true, report });
   } catch (err) {
@@ -73,7 +71,5 @@ export async function POST(request) {
       { success: false, error: err.message || 'Analysis failed' },
       { status: 400 }
     );
-  } finally {
-    if (cloneDir) cleanupClone(cloneDir);
   }
 }

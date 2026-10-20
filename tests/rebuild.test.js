@@ -255,19 +255,19 @@ describe('RebuildBot - Buildathon checklist', () => {
       owner: 'baby-ghost1',
       repo: 'RebuildBot',
       branch: null,
-      url: 'https://github.com/baby-ghost1/RebuildBot.git',
+      url: 'https://github.com/baby-ghost1/RebuildBot',
     });
 
     expect(parseGithubUrl('https://github.com/owner/repo.git').repo).toBe('repo');
     expect(parseGithubUrl('http://github.com/owner/repo').owner).toBe('owner');
     expect(parseGithubUrl('https://www.github.com/owner/repo').owner).toBe('owner');
     expect(parseGithubUrl('git@github.com:owner/repo.git').url).toBe(
-      'https://github.com/owner/repo.git'
+      'https://github.com/owner/repo'
     );
 
     const branch = parseGithubUrl('https://github.com/owner/repo/tree/dev');
     expect(branch.branch).toBe('dev');
-    expect(branch.url).toBe('https://github.com/owner/repo.git');
+    expect(branch.url).toBe('https://github.com/owner/repo');
   });
 
   test('GitHub URL parser rejects anything that is not a GitHub repo', () => {
@@ -279,20 +279,24 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(parseGithubUrl('not a url')).toBeNull();
   });
 
-  test('The analyze route module loads without errors', () => {
+  test('The analyze route loads without errors', () => {
     const fs2 = require('fs');
     const path2 = require('path');
     const route = path2.join(projectRoot, 'app', 'api', 'analyze', 'route.js');
     expect(fs2.existsSync(route)).toBe(true);
     const content = fs2.readFileSync(route, 'utf8');
     expect(content).toMatch(/parseGithubUrl/);
-    expect(content).toMatch(/cloneRepo/);
-    expect(content).toMatch(/cleanupClone/);
+    expect(content).toMatch(/createGitHubSource/);
+    expect(content).toMatch(/analyzeSource/);
   });
 
-  test('Docker image includes git so GitHub URLs can be cloned', () => {
-    const content = fs.readFileSync(path.join(projectRoot, 'Dockerfile'), 'utf8');
-    expect(content).toMatch(/apt-get install[^\n]*\bgit\b/);
+  test('GitHub analysis uses the REST API and needs no git binary', () => {
+    const lib = fs.readFileSync(path.join(projectRoot, 'lib', 'github.js'), 'utf8');
+    expect(lib).toMatch(/api\.github\.com/);
+    expect(lib).toMatch(/raw\.githubusercontent\.com/);
+    // A serverless runtime has no git binary, so nothing may depend on it.
+    expect(lib).not.toMatch(/spawn\(/);
+    expect(lib).not.toMatch(/clone/);
   });
 
   test('Analyzer throws a clear error for a missing path', () => {

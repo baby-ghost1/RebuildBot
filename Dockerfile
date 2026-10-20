@@ -7,12 +7,6 @@
 FROM node:22-slim
 WORKDIR /app
 
-# git is required to clone a GitHub repository for analysis.
-# ca-certificates lets git talk to github.com over HTTPS.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
 # Telemetry stays off so the build never reaches the network
 ENV NEXT_TELEMETRY_DISABLED=1
 
