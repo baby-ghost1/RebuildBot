@@ -10,6 +10,7 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 
 - **Live rebuild score** - analyzes a repo and scores it 0-100 against the Buildathon checklist
 - **Three ways to point at a project** - a GitHub URL, a local folder path, or a folder you pick in your browser
+- **One source at a time** - typing in the input disables the other two options, so the interface never gets confusing. A Reset button appears whenever a source is active.
 - **11 checklist checks** - lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo, `.dockerignore`, `.gitignore`
 - **One-click analysis** - hit "Run Analysis", see pass/fail instantly
 - **Refined interface** - warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
