@@ -94,6 +94,31 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(pkg.scripts.build).toBeDefined();
   });
 
+  test('Analyzer detects hardcoded local paths in any source folder', () => {
+    const fs2 = require('fs');
+    const os = require('os');
+    const path2 = require('path');
+    const analyzer = require('../lib/analyzer.js');
+    const run = analyzer.default ? analyzer.default : analyzer;
+
+    const tmp = fs2.mkdtempSync(path2.join(os.tmpdir(), 'rebuildbot-test-'));
+    try {
+      // Simulate a project with a hardcoded Windows user path inside src/
+      fs2.mkdirSync(path2.join(tmp, 'src'), { recursive: true });
+      fs2.writeFileSync(
+        path2.join(tmp, 'src', 'index.js'),
+        'const p = "C:\\\\Users\\\\someone\\\\Desktop\\\\project";\n'
+      );
+
+      const report = run(tmp);
+      const check = report.checks.find((c) => c.id === 'no-hardcoded-paths');
+      expect(check.pass).toBe(false);
+      expect(check.detail).toMatch(/src\/index\.js/);
+    } finally {
+      fs2.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   test('Self-hosted fonts are present and not excluded from the build', () => {
     const fontsDir = path.join(projectRoot, 'app', 'fonts');
     ['inter-latin.woff2', 'space-grotesk-latin.woff2', 'jetbrains-mono-latin.woff2'].forEach((f) => {
