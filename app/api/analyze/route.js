@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import analyzeRepo from '../../../lib/analyzer.js';
 import { parseGithubUrl, cloneRepo, cleanupClone } from '../../../lib/github.js';
 
+// Cloning a repository can take a while, so allow a longer budget on
+// serverless hosts such as Vercel.
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
   let cloneDir = null;
 
