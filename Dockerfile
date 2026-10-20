@@ -34,7 +34,9 @@ RUN npm test
 RUN npm run build
 
 # 5. Serve the built app
+#    PORT is intentionally not hardcoded. Cloud hosts (Render, Railway, Fly.io)
+#    inject their own PORT, and scripts/start.js reads it. Locally it falls
+#    back to 5000.
 ENV NODE_ENV=production
-ENV PORT=5000
 EXPOSE 5000
 CMD ["npm", "start"]
