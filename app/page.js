@@ -30,6 +30,7 @@ import {
   Globe,
   ClipboardCopy,
   Trash2,
+  FolderOpen,
 } from 'lucide-react';
 
 // Copy and paste ready fix for every failing checklist item
@@ -75,13 +76,16 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [copiedFix, setCopiedFix] = useState('');
   const [inputCopied, setInputCopied] = useState(false);
+  const [folderName, setFolderName] = useState('');
+  const [folderBusy, setFolderBusy] = useState(false);
   const inputRef = useRef(null);
+  const folderInputRef = useRef(null);
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
   const resultsRef = useRef(null);
 
   useEffect(() => {
-    runAnalysis();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // No automatic analysis on load. The user picks what to score, either by
+    // entering a repo or by pressing the "Score this project" button.
   }, []);
 
   // Heartbeat: while the dashboard is open it pings the health route on a
@@ -160,6 +164,71 @@ export default function Home() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setError('Clipboard is blocked in this browser. Select the command and copy it manually.');
+    }
+  };
+
+  /**
+   * Read a folder the user picks in their browser and score it on the server.
+   * This is the only way to analyse a local project from a hosted deployment,
+   * because the server cannot see the user's disk.
+   */
+  const handleFolderPick = async (event) => {
+    const picked = Array.from(event.target.files || []);
+    event.target.value = ''; // allow picking the same folder again
+    if (picked.length === 0) return;
+
+    setFolderBusy(true);
+    setError('');
+
+    try {
+      const files = {};
+      let total = 0;
+      let hasGit = false;
+      const MAX_FILES = 300;
+      const MAX_BYTES = 4 * 1024 * 1024;
+
+      for (const file of picked) {
+        // webkitRelativePath looks like "my-app/src/index.js" - drop the root
+        // folder so paths are relative to the project root.
+        const full = file.webkitRelativePath || file.name;
+        const parts = full.split('/');
+        const rel = parts.length > 1 ? parts.slice(1).join('/') : parts[0];
+
+        // The .git folder can be huge, so never upload it. We only record
+        // that it exists so the git check still works.
+        if (rel === '.git' || rel.startsWith('.git/')) {
+          hasGit = true;
+          continue;
+        }
+
+        if (Object.keys(files).length >= MAX_FILES) break;
+        if (total + file.size > MAX_BYTES) break;
+
+        files[rel] = await file.text();
+        total += file.size;
+      }
+
+      const rootName = (picked[0].webkitRelativePath || picked[0].name).split('/')[0];
+
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files, folderName: rootName, hasGit }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data?.error || `Upload failed with status ${res.status}`);
+        return;
+      }
+
+      setFolderName(rootName);
+      setReport(data.report);
+      setShowOnlyFailures(false);
+    } catch (e) {
+      setError(`Could not read the selected folder: ${e?.message || 'unknown error'}`);
+    } finally {
+      setFolderBusy(false);
     }
   };
 
@@ -454,9 +523,74 @@ export default function Home() {
                 </button>
               </div>
 
-              <p className="mt-3 text-[11.5px] text-[#0B132B]/45">
-                Press Enter to run. Leave the field empty to score the RebuildBot project itself.
+              <p className="mt-2.5 text-[11.5px] text-[#0B132B]/45">
+                Press Enter to run, or use one of the buttons below.
               </p>
+
+              {/* Choose a local folder from the browser */}
+              <input
+                ref={folderInputRef}
+                type="file"
+                webkitdirectory="true"
+                directory=""
+                multiple
+                onChange={handleFolderPick}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                disabled={folderBusy}
+                className="group mt-3 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:opacity-60"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88] transition group-hover:scale-105">
+                  {folderBusy ? (
+                    <RotateCcw className="h-[18px] w-[18px] animate-spin" strokeWidth={2.3} />
+                  ) : (
+                    <FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold text-[#0B132B]">
+                    {folderBusy ? 'Reading folder...' : 'Choose a local folder'}
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-[#3D4560]/80">
+                    {folderName
+                      ? `Last analysed: ${folderName}. Pick another to re-run.`
+                      : 'Pick a folder from this computer and score it, even on a hosted deployment.'}
+                  </p>
+                </div>
+                <ArrowRight
+                  className="h-4 w-4 shrink-0 text-[#0B132B]/50 transition-transform group-hover:translate-x-1"
+                  strokeWidth={2.4}
+                />
+              </button>
+
+              {/* Score this project button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRepoPath('');
+                  setInputCopied(false);
+                  runAnalysis();
+                }}
+                disabled={loading}
+                className="group mt-4 flex w-full items-center gap-3.5 rounded-xl border border-[#0B132B]/10 bg-[#FBFAF7] px-4 py-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#39FF88] hover:bg-[#39FF88]/10 disabled:translate-y-0 disabled:opacity-60"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0B132B] text-[#39FF88] transition group-hover:scale-105">
+                  <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold text-[#0B132B]">Score this project</p>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-[#3D4560]/80">
+                    Run the full 11-point checklist against RebuildBot own source repository.
+                  </p>
+                </div>
+                <ArrowRight
+                  className="h-4 w-4 shrink-0 text-[#0B132B]/50 transition-transform group-hover:translate-x-1"
+                  strokeWidth={2.4}
+                />
+              </button>
 
               {error && (
                 <div className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3.5">
@@ -478,6 +612,20 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Empty state - shown until the user runs an analysis */}
+        {!report && !loading && (
+          <section className="mt-8 rounded-3xl border border-dashed border-[#0B132B]/15 bg-white/50 p-10 text-center backdrop-blur-xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#0B132B] text-[#39FF88]">
+              <Gauge className="h-6 w-6" strokeWidth={2.1} />
+            </div>
+            <h3 className="mt-4 text-[15px] font-bold text-[#0B132B]">No analysis yet</h3>
+            <p className="mx-auto mt-2 max-w-[46ch] text-[12.5px] leading-relaxed text-[#3D4560]/80">
+              Enter a GitHub URL or a local folder path above and press Run Analysis, or press
+              Score this project to run the checklist against RebuildBot own source.
+            </p>
+          </section>
+        )}
 
         {/* Results */}
         {report && (
@@ -502,11 +650,18 @@ export default function Home() {
                   <p className="mt-2.5 inline-flex max-w-full items-center gap-1.5 rounded-md border border-[#0B132B]/10 bg-[#FBFAF7] px-2.5 py-1 font-mono text-[10px] text-[#0B132B]/60">
                     {report.source === 'github' ? (
                       <Globe className="h-3 w-3 shrink-0" strokeWidth={2.2} />
+                    ) : report.source === 'browser' ? (
+                      <FolderOpen className="h-3 w-3 shrink-0" strokeWidth={2.2} />
                     ) : (
                       <FolderSearch className="h-3 w-3 shrink-0" strokeWidth={2.2} />
                     )}
                     <span className="truncate">{report.repoPath}</span>
                   </p>
+                  {report.isSelf && (
+                    <p className="mt-1.5 text-[11px] font-medium text-[#0B132B]/50">
+                      This deployment is scoring its own source repository on GitHub.
+                    </p>
+                  )}
                 </div>
               </div>
 

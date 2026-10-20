@@ -169,6 +169,74 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(page).toMatch(/\/api\/health/);
   });
 
+  test('The analyze route scores the deployment own repository when input is empty', () => {
+    const route = path.join(projectRoot, 'app', 'api', 'analyze', 'route.js');
+    const content = fs.readFileSync(route, 'utf8');
+    // On a serverless host the working folder only has the compiled bundle,
+    // so the route must fall back to the GitHub repository it was built from.
+    expect(content).toMatch(/VERCEL_GIT_REPO_OWNER/);
+    expect(content).toMatch(/VERCEL_GIT_REPO_SLUG/);
+    expect(content).toMatch(/SELF_REPO_URL/);
+    expect(content).toMatch(/isSelf/);
+  });
+
+  test('Memory source scores a folder uploaded from the browser', () => {
+    const { createMemorySource } = require('../lib/source.js');
+    const { analyzeSource } = require('../lib/analyzer.js');
+
+    const files = {
+      'package-lock.json': '{"lockfileVersion":3}',
+      '.nvmrc': '22',
+      Dockerfile: 'FROM node:22-slim\n',
+      'package.json': JSON.stringify({ name: 'x', scripts: { test: 'jest' } }),
+      'README.md': 'npm test\n',
+      '.env.example': 'PORT=5000\n',
+      '.gitignore': 'node_modules\n',
+      '.dockerignore': 'node_modules\n',
+      'src/index.js': 'export const ok = true;\n',
+    };
+
+    const report = analyzeSource(createMemorySource(files, 'demo', true), {
+      display: 'demo',
+      source: 'browser',
+    });
+
+    expect(report.source).toBe('browser');
+    expect(report.repoPath).toBe('demo');
+    expect(report.score).toBe(100);
+    expect(report.passed).toBe(report.total);
+  });
+
+  test('Memory source flags a hardcoded local path', () => {
+    const { createMemorySource } = require('../lib/source.js');
+    const { analyzeSource } = require('../lib/analyzer.js');
+
+    const files = {
+      'package.json': JSON.stringify({ name: 'x', scripts: { test: 'jest' } }),
+      'src/index.js': 'const p = "C:\\\\Users\\\\someone\\\\Desktop\\\\x";\n',
+    };
+
+    const report = analyzeSource(createMemorySource(files, 'demo'), { source: 'browser' });
+    const check = report.checks.find((c) => c.id === 'no-hardcoded-paths');
+    expect(check.pass).toBe(false);
+    expect(check.detail).toMatch(/src\/index\.js/);
+  });
+
+  test('The analyze route accepts a browser uploaded file map', () => {
+    const route = path.join(projectRoot, 'app', 'api', 'analyze', 'route.js');
+    const content = fs.readFileSync(route, 'utf8');
+    expect(content).toMatch(/createMemorySource/);
+    expect(content).toMatch(/analyzeSource/);
+    expect(content).toMatch(/body\.files/);
+  });
+
+  test('The frontend offers a local folder picker', () => {
+    const page = fs.readFileSync(path.join(projectRoot, 'app', 'page.js'), 'utf8');
+    expect(page).toMatch(/webkitdirectory/);
+    expect(page).toMatch(/handleFolderPick/);
+    expect(page).toMatch(/FolderOpen/);
+  });
+
   test('Analyzing this project yields a perfect score', () => {
     const analyzer = require('../lib/analyzer.js');
     const report = analyzer.default ? analyzer.default(projectRoot) : analyzer(projectRoot);
