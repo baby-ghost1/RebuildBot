@@ -8,16 +8,16 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 
 ## ✨ What it does
 
-- **Live rebuild score** — analyzes a repo and scores it 0-100 against the Buildathon checklist
-- **GitHub URL or local folder** — paste `https://github.com/owner/repo` and it shallow clones into a temp folder, or point at a local path
-- **11 checklist checks** — lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo, `.dockerignore`, `.gitignore`
-- **One-click analysis** — hit "Run Analysis", see pass/fail instantly
-- **Refined interface** — warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
-- **How-to-use guide built in** — worked example shown right in the dashboard
-- **Failure filter** — one tap to hide passing checks and focus on what to fix
-- **What to do next** — every failing item comes with a copy-paste fix command
-- **Copy-to-clipboard** — grab the exact judge command with one click
-- **Zero API keys** — uses only free OmniRush features and standard open-source libraries
+- **Live rebuild score** - analyzes a repo and scores it 0-100 against the Buildathon checklist
+- **Three ways to point at a project** - a GitHub URL, a local folder path, or a folder you pick in your browser
+- **11 checklist checks** - lockfile, version pin, Dockerfile, base image, test command, README, `.env.example`, no hardcoded paths, git repo, `.dockerignore`, `.gitignore`
+- **One-click analysis** - hit "Run Analysis", see pass/fail instantly
+- **Refined interface** - warm-white backdrop panels, `lucide-react` SVG iconography, no emoji
+- **How-to-use guide built in** - worked example shown right in the dashboard
+- **Failure filter** - one tap to hide passing checks and focus on what to fix
+- **Inline fix commands** - every failing item comes with a copy-paste command
+- **Copy-to-clipboard** - grab the exact judge command with one click
+- **Zero API keys** - uses only free OmniRush features and standard open-source libraries
 
 ## 🛠 Tech stack
 
@@ -26,10 +26,11 @@ Judges rebuild every project from scratch in Docker on a clean Linux machine and
 | Frontend | **Next.js 14** (App Router) + React 18 + **Tailwind CSS v4** |
 | Icons | **lucide-react** (SVG icon set, no emoji) |
 | Backend | Next.js API Routes (`/api/health`, `/api/analyze`) |
-| Repo fetching | `git clone --depth 1` via `lib/github.js` |
-| Core logic | `lib/analyzer.js` — 11-point rebuild-readiness analyzer |
-| Tests | Jest (23 offline tests) |
-| Container | Docker (`node:22-slim` + `git`), offline-capable |
+| Repo fetching | **GitHub REST API** (`lib/github.js`) - no git binary needed, works on serverless |
+| Local folders | Browser folder picker reads the files client side (`lib/source.js`) |
+| Core logic | `lib/analyzer.js` - 11-point rebuild-readiness analyzer |
+| Tests | Jest (31 offline tests) + `scripts/e2e.js` (34 end to end checks) |
+| Container | Docker (`node:22-slim`), offline-capable |
 
 ---
 
@@ -95,7 +96,24 @@ node scripts/keepalive.js https://rebuildbot.vercel.app --interval 3
 npm test
 ```
 
-Runs **23 offline tests** that verify the Dockerfile, lockfile, `.nvmrc`, README, `.env.example`, test script, hardcoded paths, Next.js structure, the self-hosted fonts, the GitHub URL parser, and that this project scores a perfect 100. **No internet required.**
+Runs **31 offline tests** that verify the Dockerfile, lockfile, `.nvmrc`, README, `.env.example`, test script, hardcoded paths, Next.js structure, the self-hosted fonts, the GitHub URL parser, the browser upload path, and that this project scores a perfect 100. **No internet required.**
+
+## 🔎 End to end test
+
+`scripts/e2e.js` exercises the running site exactly like a visitor would:
+
+```bash
+# start the server first
+npm run serve
+
+# then, against any deployment
+node scripts/e2e.js http://localhost:5000
+node scripts/e2e.js https://rebuildbot.vercel.app
+```
+
+It checks the pages, the health route, all three analysis modes (local folder, GitHub URL, browser upload), every error path, the keep-alive pings, and the Docker judge command. It prints a pass/fail summary and exits non-zero if anything is broken.
+
+---
 
 ## 🐳 Rebuild it like a judge
 
@@ -169,14 +187,16 @@ rebuildbot/
 │  └─ api/
 │     ├─ health/route.js   # GET /api/health
 │     └─ analyze/route.js  # POST /api/analyze
-├─ lib/
-│  ├─ analyzer.js          # 11-point rebuild-readiness logic
-│  └─ github.js            # GitHub URL parser + shallow clone
 ├─ scripts/
 │  ├─ serve.js             # server supervisor (start/stop/status/restart)
 │  ├─ start.js             # production launcher (honours PORT)
 │  ├─ dev.js               # dev server launcher (uses .next-dev)
-│  └─ keepalive.js         # health-route pinger for free-tier hosts
+│  ├─ keepalive.js         # health-route pinger for free-tier hosts
+│  └─ e2e.js               # end to end test of a running deployment
+├─ lib/
+│  ├─ analyzer.js          # 11-point rebuild-readiness logic
+│  ├─ github.js            # GitHub URL parser + REST API source
+│  └─ source.js            # local / memory / github source adapters
 ├─ tests/
 │  └─ rebuild.test.js      # 23 offline checklist tests
 ├─ .nvmrc                  # pins Node 22

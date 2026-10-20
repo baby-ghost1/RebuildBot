@@ -602,8 +602,9 @@ export default function Home() {
                         {error}
                       </p>
                       <p className="mt-2 text-[11.5px] leading-relaxed text-rose-600">
-                        GitHub URLs must look like https://github.com/owner/repo. Local paths must
-                        be absolute, for example C:\projects\my-app.
+                        GitHub URLs must look like https://github.com/owner/repo. A local path
+                        must exist on the machine running the app, so on a hosted deployment use
+                        the folder picker button instead.
                       </p>
                     </div>
                   </div>
