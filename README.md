@@ -90,6 +90,20 @@ veil and two blurred colour blooms for depth.
 Tailwind v4 is configured in CSS via `@theme` in `app/globals.css` - there is no
 `tailwind.config.js` file.
 
+### Typography
+
+Three self-hosted variable fonts live in `app/fonts/` and are wired through
+`next/font/local`, so the build never reaches the network.
+
+| Role | Font | File | Used for |
+|------|------|------|----------|
+| Sans | Inter | `inter-latin.woff2` | Body copy, buttons, labels |
+| Display | Space Grotesk | `space-grotesk-latin.woff2` | Headings (h1 to h4) |
+| Mono | JetBrains Mono | `jetbrains-mono-latin.woff2` | Code, paths, commands |
+
+Line length is capped with `ch` units (`max-w-[58ch]` for body copy, `max-w-[52ch]` for
+card text) so text never stretches too wide on large displays.
+
 ---
 
 ## 📁 Project structure
@@ -100,6 +114,11 @@ rebuildbot/
 │  ├─ layout.js            # Root layout
 │  ├─ page.js              # Dashboard UI (lucide icons, no emoji)
 │  ├─ globals.css          # Tailwind v4 @theme + backdrop utilities
+│  ├─ fonts/
+│  │  ├─ fonts.js          # next/font/local setup
+│  │  ├─ inter-latin.woff2
+│  │  ├─ space-grotesk-latin.woff2
+│  │  └─ jetbrains-mono-latin.woff2
 │  └─ api/
 │     ├─ health/route.js   # GET /api/health
 │     └─ analyze/route.js  # POST /api/analyze

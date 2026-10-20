@@ -94,6 +94,33 @@ describe('RebuildBot - Buildathon checklist', () => {
     expect(pkg.scripts.build).toBeDefined();
   });
 
+  test('Self-hosted fonts are present and not excluded from the build', () => {
+    const fontsDir = path.join(projectRoot, 'app', 'fonts');
+    ['inter-latin.woff2', 'space-grotesk-latin.woff2', 'jetbrains-mono-latin.woff2'].forEach((f) => {
+      const file = path.join(fontsDir, f);
+      expect(fs.existsSync(file)).toBe(true);
+      expect(fs.statSync(file).size).toBeGreaterThan(1000);
+    });
+
+    // The fonts must not be excluded by .dockerignore or .gitignore,
+    // otherwise the offline Docker build would fail to find them.
+    const dockerignore = fs.readFileSync(path.join(projectRoot, '.dockerignore'), 'utf8');
+    expect(dockerignore).not.toMatch(/^\s*app\/fonts/im);
+    const gitignore = fs.readFileSync(path.join(projectRoot, '.gitignore'), 'utf8');
+    expect(gitignore).not.toMatch(/^\s*app\/fonts/im);
+  });
+
+  test('Fonts are wired through next/font/local in the layout', () => {
+    const fontsJs = fs.readFileSync(path.join(projectRoot, 'app', 'fonts', 'fonts.js'), 'utf8');
+    expect(fontsJs).toMatch(/localFont/);
+    expect(fontsJs).toMatch(/--font-inter/);
+    expect(fontsJs).toMatch(/--font-space/);
+    expect(fontsJs).toMatch(/--font-jetbrains/);
+
+    const layout = fs.readFileSync(path.join(projectRoot, 'app', 'layout.js'), 'utf8');
+    expect(layout).toMatch(/fontVariables/);
+  });
+
   test('Analyzing this project yields a perfect score', () => {
     const analyzer = require('../lib/analyzer.js');
     const report = analyzer.default ? analyzer.default(projectRoot) : analyzer(projectRoot);
